@@ -1,30 +1,87 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
-import { MOCK_MATCHES, Match } from '../services/mockData';
 
 export default function Predictions() {
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<Record<string, string>>({});
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulated fetch
-    setMatches(MOCK_MATCHES);
-    
-    // Load local predictions
-    const localPreds = localStorage.getItem('quiniela_preds');
-    if (localPreds) {
-      setPredictions(JSON.parse(localPreds));
-    }
+    fetchData();
   }, []);
 
-  const handleSelectTeam = (matchId: string, teamId: string) => {
-    const newPreds = { ...predictions, [matchId]: teamId };
-    setPredictions(newPreds);
-    localStorage.setItem('quiniela_preds', JSON.stringify(newPreds));
+  const fetchData = async () => {
+    // Obtener usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+      
+      // Obtener predicciones de este usuario
+      const { data: predsData } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (predsData) {
+        const predsMap: Record<string, string> = {};
+        predsData.forEach(p => {
+          predsMap[p.match_id] = p.predicted_winner_id;
+        });
+        setPredictions(predsMap);
+      }
+    }
+
+    // Obtener todos los partidos ordenados por fecha
+    const { data: matchesData } = await supabase
+      .from('matches')
+      .select('*')
+      .order('match_date', { ascending: true });
+      
+    if (matchesData) {
+      // Convertir el formato snake_case de DB al camelCase que usa el componente
+      const formattedMatches = matchesData.map(m => ({
+        id: m.id,
+        homeTeamId: m.home_team_id,
+        awayTeamId: m.away_team_id,
+        date: m.match_date,
+        isFinished: m.is_finished,
+        homeScore: m.home_score,
+        awayScore: m.away_score,
+        winnerTeamId: m.winner_team_id
+      }));
+      setMatches(formattedMatches);
+    }
+  };
+
+  const handleSelectTeam = async (matchId: string, teamId: string) => {
+    if (!userId) return;
+
+    // Actualizar UI optimísticamente
+    setPredictions(prev => ({ ...prev, [matchId]: teamId }));
+
+    // Guardar en Supabase
+    // Al usar upsert, o inserta o actualiza gracias al constraint UNIQUE
+    const { error } = await supabase
+      .from('predictions')
+      .upsert({
+        user_id: userId,
+        match_id: matchId,
+        predicted_winner_id: teamId
+      }, { onConflict: 'user_id, match_id' });
+
+    if (error) {
+      console.error("Error guardando predicción:", error);
+      // Podrías revertir el estado aquí si falla
+    }
   };
 
   const pendingMatches = matches.filter(m => !m.isFinished);
   const finishedMatches = matches.filter(m => m.isFinished);
+
+  if (matches.length === 0) {
+    return <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>No hay partidos programados aún. Pide a un Administrador que añada algunos.</div>;
+  }
 
   return (
     <div style={{ animation: 'slideUp 0.4s ease' }}>
