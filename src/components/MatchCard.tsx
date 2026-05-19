@@ -29,7 +29,7 @@ export default function MatchCard({ match, selectedTeamId, onSelectTeam }: Match
           onClick={() => !match.isFinished && onSelectTeam && onSelectTeam(awayTeam.id)}
           style={{ '--team-color': awayTeam.color } as React.CSSProperties}
         >
-          <div className={styles.logo}>{awayTeam.logo}</div>
+          <img src={awayTeam.logo} alt={awayTeam.name} className={styles.logo} />
           <span className={styles.name}>{awayTeam.name}</span>
           {match.isFinished && <span className={styles.score}>{match.awayScore}</span>}
         </div>
@@ -42,7 +42,7 @@ export default function MatchCard({ match, selectedTeamId, onSelectTeam }: Match
           onClick={() => !match.isFinished && onSelectTeam && onSelectTeam(homeTeam.id)}
           style={{ '--team-color': homeTeam.color } as React.CSSProperties}
         >
-          <div className={styles.logo}>{homeTeam.logo}</div>
+          <img src={homeTeam.logo} alt={homeTeam.name} className={styles.logo} />
           <span className={styles.name}>{homeTeam.name}</span>
           {match.isFinished && <span className={styles.score}>{match.homeScore}</span>}
         </div>

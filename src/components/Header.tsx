@@ -1,14 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Trophy, Calendar, Clock, LogOut } from 'lucide-react';
+import { Trophy, Calendar, Clock, LogOut, Settings } from 'lucide-react';
 import styles from './Header.module.css';
 import Avatar from './Avatar';
 
 interface HeaderProps {
   user: string;
+  role: 'admin' | 'user';
   onLogout: () => void;
 }
 
-export default function Header({ user, onLogout }: HeaderProps) {
+export default function Header({ user, role, onLogout }: HeaderProps) {
   const location = useLocation();
 
   return (
@@ -28,12 +29,17 @@ export default function Header({ user, onLogout }: HeaderProps) {
           <Link to="/history" className={`${styles.navLink} ${location.pathname === '/history' ? styles.active : ''}`}>
             <Calendar size={18} /> Historial
           </Link>
+          {role === 'admin' && (
+            <Link to="/admin" className={`${styles.navLink} ${location.pathname === '/admin' ? styles.active : ''}`} style={{ color: 'var(--primary-nfl)' }}>
+              <Settings size={18} /> Admin
+            </Link>
+          )}
         </nav>
 
         <div className={styles.userSection}>
           <div className={styles.userInfo}>
             <Avatar name={user} size={32} />
-            <span className={styles.userName}>{user}</span>
+            <span className={styles.userName}>{user} {role === 'admin' && '⭐'}</span>
           </div>
           <button onClick={onLogout} className={styles.logoutBtn} title="Cerrar Sesión">
             <LogOut size={18} />

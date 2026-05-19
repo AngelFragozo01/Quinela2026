@@ -29,12 +29,12 @@ export interface Prediction {
 }
 
 export const TEAMS: Record<string, Team> = {
-  KC: { id: 'KC', name: 'Chiefs', logo: '🏈', color: '#E31837' },
-  SF: { id: 'SF', name: '49ers', logo: '🏈', color: '#AA0000' },
-  BAL: { id: 'BAL', name: 'Ravens', logo: '🦅', color: '#241773' },
-  BUF: { id: 'BUF', name: 'Bills', logo: '🦬', color: '#00338D' },
-  DAL: { id: 'DAL', name: 'Cowboys', logo: '⭐', color: '#041E42' },
-  PHI: { id: 'PHI', name: 'Eagles', logo: '🦅', color: '#004C54' },
+  KC: { id: 'KC', name: 'Chiefs', logo: '/images/Kansas City_Chiefs.png', color: '#E31837' },
+  SF: { id: 'SF', name: '49ers', logo: '/images/San Francisco_49ers.png', color: '#AA0000' },
+  BAL: { id: 'BAL', name: 'Ravens', logo: '/images/Baltimore_Ravens.png', color: '#241773' },
+  BUF: { id: 'BUF', name: 'Bills', logo: '/images/buffalo_bills.png', color: '#00338D' },
+  DAL: { id: 'DAL', name: 'Cowboys', logo: '/images/Dallas Cowboys.png', color: '#041E42' },
+  PHI: { id: 'PHI', name: 'Eagles', logo: '/images/Philadelphia_Eagles.png', color: '#004C54' },
 };
 
 export const MOCK_MATCHES: Match[] = [
