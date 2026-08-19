@@ -55,11 +55,12 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.finished .team {
+.finished .team,
+.locked .team {
   cursor: default;
 }
 
-.team:hover:not(.finished .team) {
+.team:hover:not(.finished .team):not(.locked .team) {
   background: rgba(255, 255, 255, 0.08);
 }
 

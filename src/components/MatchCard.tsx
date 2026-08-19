@@ -4,10 +4,11 @@ import { TEAMS, Match } from '../services/mockData';
 interface MatchCardProps {
   match: Match;
   selectedTeamId?: string;
+  isLocked?: boolean;
   onSelectTeam?: (teamId: string) => void;
 }
 
-export default function MatchCard({ match, selectedTeamId, onSelectTeam }: MatchCardProps) {
+export default function MatchCard({ match, selectedTeamId, isLocked, onSelectTeam }: MatchCardProps) {
   const homeTeam = TEAMS[match.homeTeamId];
   const awayTeam = TEAMS[match.awayTeamId];
   const matchDate = new Date(match.date);
@@ -15,22 +16,41 @@ export default function MatchCard({ match, selectedTeamId, onSelectTeam }: Match
   const formattedDate = matchDate.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
   const formattedTime = matchDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
+  const canClick = !match.isFinished && !isLocked;
+
   return (
-    <div className={`${styles.card} ${match.isFinished ? styles.finished : ''}`}>
+    <div className={`${styles.card} ${match.isFinished ? styles.finished : ''} ${isLocked ? styles.locked : ''}`}>
       <div className={styles.header}>
         <span className={styles.date}>{formattedDate} • {formattedTime}</span>
         {match.isFinished && <span className={styles.statusLabel}>FINALIZADO</span>}
+        {!match.isFinished && isLocked && (
+          <span style={{ 
+            background: 'rgba(239, 68, 68, 0.15)', 
+            color: '#f87171', 
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            padding: '0.2rem 0.5rem', 
+            borderRadius: '4px', 
+            fontSize: '0.75rem', 
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}>
+            🔒 CERRADO
+          </span>
+        )}
       </div>
 
       <div className={styles.teams}>
         {/* Away Team */}
         <div 
-          className={`${styles.team} ${selectedTeamId === awayTeam.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === awayTeam.id ? styles.winner : ''}`}
-          onClick={() => !match.isFinished && onSelectTeam && onSelectTeam(awayTeam.id)}
-          style={{ '--team-color': awayTeam.color } as React.CSSProperties}
+          className={`${styles.team} ${selectedTeamId === awayTeam?.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === awayTeam?.id ? styles.winner : ''}`}
+          onClick={() => canClick && onSelectTeam && onSelectTeam(awayTeam.id)}
+          style={{ '--team-color': awayTeam?.color } as React.CSSProperties}
+          title={isLocked ? 'Predicción enviada y bloqueada' : canClick ? `Votar por ${awayTeam?.name}` : ''}
         >
-          <img src={awayTeam.logo} alt={awayTeam.name} className={styles.logo} />
-          <span className={styles.name}>{awayTeam.name}</span>
+          <img src={awayTeam?.logo} alt={awayTeam?.name} className={styles.logo} />
+          <span className={styles.name}>{awayTeam?.name}</span>
           {match.isFinished && <span className={styles.score}>{match.awayScore}</span>}
         </div>
 
@@ -38,12 +58,13 @@ export default function MatchCard({ match, selectedTeamId, onSelectTeam }: Match
 
         {/* Home Team */}
         <div 
-          className={`${styles.team} ${selectedTeamId === homeTeam.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === homeTeam.id ? styles.winner : ''}`}
-          onClick={() => !match.isFinished && onSelectTeam && onSelectTeam(homeTeam.id)}
-          style={{ '--team-color': homeTeam.color } as React.CSSProperties}
+          className={`${styles.team} ${selectedTeamId === homeTeam?.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === homeTeam?.id ? styles.winner : ''}`}
+          onClick={() => canClick && onSelectTeam && onSelectTeam(homeTeam.id)}
+          style={{ '--team-color': homeTeam?.color } as React.CSSProperties}
+          title={isLocked ? 'Predicción enviada y bloqueada' : canClick ? `Votar por ${homeTeam?.name}` : ''}
         >
-          <img src={homeTeam.logo} alt={homeTeam.name} className={styles.logo} />
-          <span className={styles.name}>{homeTeam.name}</span>
+          <img src={homeTeam?.logo} alt={homeTeam?.name} className={styles.logo} />
+          <span className={styles.name}>{homeTeam?.name}</span>
           {match.isFinished && <span className={styles.score}>{match.homeScore}</span>}
         </div>
       </div>
