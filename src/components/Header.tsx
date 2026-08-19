@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Trophy, Calendar, Clock, LogOut, Settings } from 'lucide-react';
+import { Trophy, Calendar, Clock, LogOut, Settings, CalendarDays } from 'lucide-react';
 import styles from './Header.module.css';
 import Avatar from './Avatar';
 
@@ -24,6 +24,9 @@ export default function Header({ user, role, onLogout }: HeaderProps) {
         <nav className={styles.nav}>
           <Link to="/predictions" className={`${styles.navLink} ${location.pathname === '/predictions' ? styles.active : ''}`}>
             <Clock size={18} /> Predicciones
+          </Link>
+          <Link to="/upcoming" className={`${styles.navLink} ${location.pathname === '/upcoming' ? styles.active : ''}`}>
+            <CalendarDays size={18} /> Próximos
           </Link>
           <Link to="/leaderboard" className={`${styles.navLink} ${location.pathname === '/leaderboard' ? styles.active : ''}`}>
             <Trophy size={18} /> Clasificación

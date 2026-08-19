@@ -16,6 +16,7 @@ export interface Match {
   homeTeamId: string;
   awayTeamId: string;
   date: string; // ISO String
+  week?: number;
   isFinished: boolean;
   homeScore?: number;
   awayScore?: number;
@@ -61,6 +62,80 @@ export const TEAMS: Record<string, Team> = {
   TB: { id: 'TB', name: 'Buccaneers', logo: '/images/Tampa Bay_Buccaneers.png', color: '#D50A0A' },
   TEN: { id: 'TEN', name: 'Titans', logo: '/images/Tennessee_Titans.png', color: '#4B92DB' },
   WAS: { id: 'WAS', name: 'Commanders', logo: '/images/Washington_Commanders.png', color: '#5A1414' },
+};
+
+export const TEAM_NAME_TO_ID: Record<string, string> = {
+  'arizona cardinals': 'ARI',
+  'cardinals': 'ARI',
+  'atlanta falcons': 'ATL',
+  'falcons': 'ATL',
+  'baltimore ravens': 'BAL',
+  'ravens': 'BAL',
+  'buffalo bills': 'BUF',
+  'bills': 'BUF',
+  'carolina panthers': 'CAR',
+  'panthers': 'CAR',
+  'chicago bears': 'CHI',
+  'bears': 'CHI',
+  'cincinnati bengals': 'CIN',
+  'bengals': 'CIN',
+  'cleveland browns': 'CLE',
+  'browns': 'CLE',
+  'dallas cowboys': 'DAL',
+  'cowboys': 'DAL',
+  'denver broncos': 'DEN',
+  'broncos': 'DEN',
+  'detroit lions': 'DET',
+  'lions': 'DET',
+  'green bay packers': 'GB',
+  'packers': 'GB',
+  'houston texans': 'HOU',
+  'texans': 'HOU',
+  'indianapolis colts': 'IND',
+  'colts': 'IND',
+  'jacksonville jaguars': 'JAX',
+  'jaguars': 'JAX',
+  'kansas city chiefs': 'KC',
+  'chiefs': 'KC',
+  'las vegas raiders': 'LV',
+  'raiders': 'LV',
+  'los angeles chargers': 'LAC',
+  'chargers': 'LAC',
+  'los angeles rams': 'LAR',
+  'rams': 'LAR',
+  'miami dolphins': 'MIA',
+  'dolphins': 'MIA',
+  'minnesota vikings': 'MIN',
+  'vikings': 'MIN',
+  'new england patriots': 'NE',
+  'patriots': 'NE',
+  'new orleans saints': 'NO',
+  'saints': 'NO',
+  'new york giants': 'NYG',
+  'giants': 'NYG',
+  'new york jets': 'NYJ',
+  'jets': 'NYJ',
+  'philadelphia eagles': 'PHI',
+  'eagles': 'PHI',
+  'pittsburgh steelers': 'PIT',
+  'steelers': 'PIT',
+  'san francisco 49ers': 'SF',
+  '49ers': 'SF',
+  'seattle seahawks': 'SEA',
+  'seahawks': 'SEA',
+  'tampa bay buccaneers': 'TB',
+  'buccaneers': 'TB',
+  'tennessee titans': 'TEN',
+  'titans': 'TEN',
+  'washington commanders': 'WAS',
+  'commanders': 'WAS',
+};
+
+export const getTeamIdFromName = (name: string): string | null => {
+  if (!name) return null;
+  const clean = name.trim().toLowerCase();
+  if (TEAMS[name.toUpperCase()]) return name.toUpperCase();
+  return TEAM_NAME_TO_ID[clean] || null;
 };
 
 export const MOCK_MATCHES: Match[] = [];

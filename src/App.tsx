@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Login from './pages/Login';
 import Predictions from './pages/Predictions';
+import Upcoming from './pages/Upcoming';
 import Leaderboard from './pages/Leaderboard';
 import History from './pages/History';
 import Admin from './pages/Admin';
@@ -72,6 +73,7 @@ function App() {
         <main className="main-content">
           <Routes>
             <Route path="/predictions" element={<Predictions />} />
+            <Route path="/upcoming" element={<Upcoming />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/history" element={<History />} />
             {profile.role === 'admin' && <Route path="/admin" element={<Admin />} />}
