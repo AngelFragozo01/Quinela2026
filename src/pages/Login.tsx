@@ -8,11 +8,13 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
@@ -26,7 +28,7 @@ export default function Login() {
         if (username.trim().length < 3) {
           throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
         }
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -36,8 +38,15 @@ export default function Login() {
           }
         });
         if (error) throw error;
+
+        if (data?.user && !data?.session) {
+          setSuccessMessage('¡Cuenta creada con éxito! Por favor revisa tu correo electrónico para confirmar la cuenta (o desactiva "Confirm email" en Supabase para entrar directamente).');
+        } else {
+          setSuccessMessage('¡Cuenta creada e inicio de sesión exitoso!');
+        }
       }
     } catch (err: any) {
+      console.error('Auth error:', err);
       setError(err.message || 'Ocurrió un error en la autenticación.');
     } finally {
       setLoading(false);
@@ -53,7 +62,8 @@ export default function Login() {
           {isLogin ? 'Ingresa para hacer tus predicciones.' : 'Crea una cuenta para participar en la quiniela.'}
         </p>
         
-        {error && <div style={{ color: 'var(--accent-hover)', marginBottom: '1rem', background: 'rgba(213, 10, 10, 0.1)', padding: '0.75rem', borderRadius: '8px' }}>{error}</div>}
+        {error && <div style={{ color: '#ef4444', marginBottom: '1rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.9rem' }}>{error}</div>}
+        {successMessage && <div style={{ color: '#10b981', marginBottom: '1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.9rem' }}>{successMessage}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           {!isLogin && (
@@ -95,7 +105,11 @@ export default function Login() {
         <div style={{ marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
           {isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
           <button 
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError(null);
+              setSuccessMessage(null);
+            }}
             style={{ background: 'none', color: 'var(--primary-nfl)', fontWeight: 'bold', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             {isLogin ? 'Regístrate aquí' : 'Inicia sesión'}

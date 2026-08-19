@@ -29,43 +29,39 @@ export interface Prediction {
 }
 
 export const TEAMS: Record<string, Team> = {
-  KC: { id: 'KC', name: 'Chiefs', logo: '/images/Kansas City_Chiefs.png', color: '#E31837' },
-  SF: { id: 'SF', name: '49ers', logo: '/images/San Francisco_49ers.png', color: '#AA0000' },
+  ARI: { id: 'ARI', name: 'Cardinals', logo: '/images/Arizona_Cardinals.png', color: '#97233F' },
+  ATL: { id: 'ATL', name: 'Falcons', logo: '/images/Atlanta_Falcons.png', color: '#A71930' },
   BAL: { id: 'BAL', name: 'Ravens', logo: '/images/Baltimore_Ravens.png', color: '#241773' },
   BUF: { id: 'BUF', name: 'Bills', logo: '/images/buffalo_bills.png', color: '#00338D' },
+  CAR: { id: 'CAR', name: 'Panthers', logo: '/images/Carolina_Panthers.png', color: '#0085CA' },
+  CHI: { id: 'CHI', name: 'Bears', logo: '/images/Chicago_Bears.png', color: '#0B162A' },
+  CIN: { id: 'CIN', name: 'Bengals', logo: '/images/Cincinnati_Bengals.png', color: '#FB4F14' },
+  CLE: { id: 'CLE', name: 'Browns', logo: '/images/Cleveland_Browns.png', color: '#311D00' },
   DAL: { id: 'DAL', name: 'Cowboys', logo: '/images/Dallas Cowboys.png', color: '#041E42' },
+  DEN: { id: 'DEN', name: 'Broncos', logo: '/images/Denver_Broncos.png', color: '#FB4F14' },
+  DET: { id: 'DET', name: 'Lions', logo: '/images/Detroit_Lions.png', color: '#0076B6' },
+  GB: { id: 'GB', name: 'Packers', logo: '/images/Green Bay_Packers.png', color: '#203731' },
+  HOU: { id: 'HOU', name: 'Texans', logo: '/images/Houston_Texans.png', color: '#03202F' },
+  IND: { id: 'IND', name: 'Colts', logo: '/images/Indianapolis_Colts.png', color: '#002C5F' },
+  JAX: { id: 'JAX', name: 'Jaguars', logo: '/images/Jacksonville_Jaguars.png', color: '#006778' },
+  KC: { id: 'KC', name: 'Chiefs', logo: '/images/Kansas City_Chiefs.png', color: '#E31837' },
+  LV: { id: 'LV', name: 'Raiders', logo: '/images/Las Vegas_Raiders.png', color: '#000000' },
+  LAC: { id: 'LAC', name: 'Chargers', logo: '/images/Los Angeles_Chargers.png', color: '#0080C6' },
+  LAR: { id: 'LAR', name: 'Rams', logo: '/images/Los Angeles_Rams.png', color: '#003594' },
+  MIA: { id: 'MIA', name: 'Dolphins', logo: '/images/Miami_dolphins.png', color: '#008E97' },
+  MIN: { id: 'MIN', name: 'Vikings', logo: '/images/Minnesota_Vikings.png', color: '#4F2683' },
+  NE: { id: 'NE', name: 'Patriots', logo: '/images/New England_Patriots.png', color: '#002244' },
+  NO: { id: 'NO', name: 'Saints', logo: '/images/New Orleans_Saints.png', color: '#D3BC8D' },
+  NYG: { id: 'NYG', name: 'Giants', logo: '/images/New York_Jets_Giants.png', color: '#0B2265' },
+  NYJ: { id: 'NYJ', name: 'Jets', logo: '/images/New York_Jets.png', color: '#125740' },
   PHI: { id: 'PHI', name: 'Eagles', logo: '/images/Philadelphia_Eagles.png', color: '#004C54' },
+  PIT: { id: 'PIT', name: 'Steelers', logo: '/images/Pittsburgh_Steelers.png', color: '#FFB612' },
+  SF: { id: 'SF', name: '49ers', logo: '/images/San Francisco_49ers.png', color: '#AA0000' },
+  SEA: { id: 'SEA', name: 'Seahawks', logo: '/images/Seattle_Seahawks.png', color: '#69BE28' },
+  TB: { id: 'TB', name: 'Buccaneers', logo: '/images/Tampa Bay_Buccaneers.png', color: '#D50A0A' },
+  TEN: { id: 'TEN', name: 'Titans', logo: '/images/Tennessee_Titans.png', color: '#4B92DB' },
+  WAS: { id: 'WAS', name: 'Commanders', logo: '/images/Washington_Commanders.png', color: '#5A1414' },
 };
 
-export const MOCK_MATCHES: Match[] = [
-  {
-    id: 'm1',
-    homeTeamId: 'KC',
-    awayTeamId: 'BAL',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // Tomorrow
-    isFinished: false,
-  },
-  {
-    id: 'm2',
-    homeTeamId: 'SF',
-    awayTeamId: 'DAL',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString(), // 2 days from now
-    isFinished: false,
-  },
-  {
-    id: 'm3',
-    homeTeamId: 'PHI',
-    awayTeamId: 'BUF',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // Yesterday
-    isFinished: true,
-    homeScore: 24,
-    awayScore: 21,
-    winnerTeamId: 'PHI',
-  }
-];
-
-export const MOCK_LEADERBOARD = [
-  { username: 'Carlos', hits: 5, points: 50 },
-  { username: 'Maria', hits: 4, points: 40 },
-  { username: 'Juan', hits: 3, points: 30 },
-];
+export const MOCK_MATCHES: Match[] = [];
+export const MOCK_LEADERBOARD = [];
