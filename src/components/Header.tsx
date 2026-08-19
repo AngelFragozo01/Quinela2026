@@ -16,7 +16,9 @@ export default function Header({ user, role, onLogout }: HeaderProps) {
     <header className={styles.header}>
       <div className={styles.container}>
         <div className={styles.logoContainer}>
-          <div className={styles.logo}>🏈 NFL Predictor</div>
+          <Link to="/predictions" className={styles.logo} style={{ textDecoration: 'none', color: 'inherit' }}>
+            🏈 NFL Predictor
+          </Link>
         </div>
         
         <nav className={styles.nav}>
