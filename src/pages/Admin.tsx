@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { TEAMS, getTeamIdFromName } from '../services/mockData';
+import { formatMatchDate } from '../services/dateUtils';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'csv'>('create');
@@ -151,7 +152,6 @@ export default function Admin() {
     const errors: string[] = [];
     const matchesToInsert: any[] = [];
 
-    // Detectar si la primera fila es encabezado
     const startIdx = lines[0].toLowerCase().includes('semana') || lines[0].toLowerCase().includes('week') ? 1 : 0;
 
     for (let i = startIdx; i < lines.length; i++) {
@@ -178,12 +178,17 @@ export default function Admin() {
         continue;
       }
 
-      // Parsear fecha
-      let parsedDate: Date;
+      // Parsear fecha evitando desfase de zona horaria
+      let isoDateString: string;
       try {
-        parsedDate = new Date(dateStr);
-        if (isNaN(parsedDate.getTime())) {
-          throw new Error('Fecha inválida');
+        const cleanDate = dateStr.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+          // Asignar 18:00 UTC (tarde en América) para evitar que se reste un día en husos horarios occidentales
+          isoDateString = `${cleanDate}T18:00:00.000Z`;
+        } else {
+          const parsed = new Date(cleanDate);
+          if (isNaN(parsed.getTime())) throw new Error('Fecha inválida');
+          isoDateString = parsed.toISOString();
         }
       } catch {
         errors.push(`Fila ${i + 1}: Fecha inválida "${dateStr}"`);
@@ -192,7 +197,7 @@ export default function Admin() {
 
       matchesToInsert.push({
         week: week,
-        match_date: parsedDate.toISOString(),
+        match_date: isoDateString,
         away_team_id: awayId,
         home_team_id: homeId,
         is_finished: false,
@@ -209,7 +214,6 @@ export default function Admin() {
     }
 
     try {
-      // Insertar en bloques de 50 para evitar sobrecarga
       const chunkSize = 50;
       let insertedCount = 0;
 
@@ -221,7 +225,7 @@ export default function Admin() {
       }
 
       setCsvProgress({ total: matchesToInsert.length, inserted: insertedCount, errors });
-      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase!`);
+      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase sin desfase de fecha!`);
     } catch (err: any) {
       setCsvMessage(`❌ Error al guardar en Supabase: ${err.message}`);
     } finally {
@@ -363,7 +367,7 @@ export default function Admin() {
               const home = TEAMS[match.home_team_id];
               const away = TEAMS[match.away_team_id];
               const matchId = match.id;
-              const dateStr = new Date(match.match_date).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+              const { formattedDate, formattedTime } = formatMatchDate(match.match_date);
 
               return (
                 <div 
@@ -377,7 +381,9 @@ export default function Admin() {
                     <span style={{ background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
                       Semana {match.week || 1}
                     </span>
-                    <span style={{ textTransform: 'uppercase' }}>{dateStr}</span>
+                    <span style={{ textTransform: 'uppercase' }}>
+                      {formattedDate} {formattedTime !== 'TBD' && formattedTime ? `• ${formattedTime}` : ''}
+                    </span>
                   </div>
                   
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
@@ -436,7 +442,7 @@ export default function Admin() {
         <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
           <h3 style={{ marginBottom: '0.5rem' }}>📁 Cargar Calendario Completo (CSV)</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-            Sube o pega el calendario de partidos en formato CSV (Semana, Fecha, Equipo Visitante, Equipo Local). El sistema mapeará automáticamente los nombres de los equipos y cargará toda la temporada en Supabase.
+            Sube o pega el calendario de partidos en formato CSV (Semana, Fecha, Equipo Visitante, Equipo Local). El sistema mapeará automáticamente los nombres de los equipos y cargará toda la temporada en Supabase sin desfases de fecha.
           </p>
 
           {csvMessage && (
@@ -468,7 +474,7 @@ export default function Admin() {
               rows={8}
               value={csvText}
               onChange={e => setCsvText(e.target.value)}
-              placeholder="Semana,Fecha,Equipo Visitante,Equipo Local&#10;1,2026-09-10,Cincinnati Bengals,Las Vegas Raiders&#10;1,2026-09-13,Denver Broncos,Baltimore Ravens..."
+              placeholder="Semana,Fecha,Equipo Visitante,Equipo Local&#10;1,2026-09-09,New England Patriots,Seattle Seahawks&#10;1,2026-09-10,San Francisco 49ers,Los Angeles Rams..."
               style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', fontFamily: 'monospace', fontSize: '0.85rem' }}
             />
           </div>

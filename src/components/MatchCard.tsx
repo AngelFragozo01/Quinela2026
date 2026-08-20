@@ -1,5 +1,6 @@
 import styles from './MatchCard.module.css';
 import { TEAMS, Match } from '../services/mockData';
+import { formatMatchDate } from '../services/dateUtils';
 
 interface MatchCardProps {
   match: Match;
@@ -11,17 +12,16 @@ interface MatchCardProps {
 export default function MatchCard({ match, selectedTeamId, isLocked, onSelectTeam }: MatchCardProps) {
   const homeTeam = TEAMS[match.homeTeamId];
   const awayTeam = TEAMS[match.awayTeamId];
-  const matchDate = new Date(match.date);
-
-  const formattedDate = matchDate.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
-  const formattedTime = matchDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
+  
+  const { formattedDate, formattedTime } = formatMatchDate(match.date);
   const canClick = !match.isFinished && !isLocked;
 
   return (
     <div className={`${styles.card} ${match.isFinished ? styles.finished : ''} ${isLocked ? styles.locked : ''}`}>
       <div className={styles.header}>
-        <span className={styles.date}>{formattedDate} • {formattedTime}</span>
+        <span className={styles.date}>
+          {formattedDate} {formattedTime !== 'TBD' && formattedTime ? `• ${formattedTime}` : ''}
+        </span>
         {match.isFinished && <span className={styles.statusLabel}>FINALIZADO</span>}
         {!match.isFinished && isLocked && (
           <span style={{ 

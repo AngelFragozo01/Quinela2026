@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { TEAMS } from '../services/mockData';
+import { isMatchToday } from '../services/dateUtils';
 import { AlertTriangle, Lock, CheckCircle2, Calendar } from 'lucide-react';
 
 interface ConfirmModalData {
@@ -68,10 +69,7 @@ export default function Predictions() {
   };
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
-    // Si ya existe una predicción guardada para este partido, no permitir cambio
     if (predictions[match.id]) return;
-
-    // Abrir modal de confirmación y advertencia
     setConfirmModal({ match, teamId });
   };
 
@@ -91,7 +89,6 @@ export default function Predictions() {
 
       if (error) throw error;
 
-      // Actualizar estado local bloqueando la predicción
       setPredictions(prev => ({ ...prev, [match.id]: teamId }));
       setConfirmModal(null);
 
@@ -104,17 +101,6 @@ export default function Predictions() {
     } finally {
       setSaving(false);
     }
-  };
-
-  // Función para comprobar si una fecha corresponde al día de hoy
-  const isMatchToday = (dateStr: string) => {
-    const matchDate = new Date(dateStr);
-    const today = new Date();
-    return (
-      matchDate.getFullYear() === today.getFullYear() &&
-      matchDate.getMonth() === today.getMonth() &&
-      matchDate.getDate() === today.getDate()
-    );
   };
 
   const todayFormatted = new Date().toLocaleDateString('es-ES', { 
