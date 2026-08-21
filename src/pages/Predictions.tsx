@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { TEAMS } from '../services/mockData';
-import { isMatchToday } from '../services/dateUtils';
-import { AlertTriangle, Lock, CheckCircle2, Calendar } from 'lucide-react';
+import { isMatchInVotingWindow, isMatchVotingLocked, getDaysUntilMatch } from '../services/dateUtils';
+import { AlertTriangle, Lock, CheckCircle2, Calendar, Clock } from 'lucide-react';
 
 interface ConfirmModalData {
   match: any;
@@ -69,13 +69,26 @@ export default function Predictions() {
   };
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
-    if (predictions[match.id]) return;
+    // Si la votación está cerrada (día de juego o fecha pasada), no permitir clic
+    if (isMatchVotingLocked(match.date)) return;
+
+    // Si ya tiene el mismo equipo seleccionado, no hacer nada
+    if (predictions[match.id] === teamId) return;
+
+    // Abrir modal de confirmación
     setConfirmModal({ match, teamId });
   };
 
   const handleConfirmPrediction = async () => {
     if (!confirmModal || !userId) return;
     const { match, teamId } = confirmModal;
+
+    // Verificación de seguridad adicional en cliente
+    if (isMatchVotingLocked(match.date)) {
+      alert("⚠️ La votación para este partido ya cerró porque hoy es el día del juego.");
+      setConfirmModal(null);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -93,7 +106,7 @@ export default function Predictions() {
       setConfirmModal(null);
 
       const teamName = TEAMS[teamId]?.name || 'Equipo';
-      setSuccessToast(`🔒 ¡Predicción confirmada para ${teamName}! Ha quedado bloqueada.`);
+      setSuccessToast(`✅ ¡Pronóstico guardado para ${teamName}! Se bloqueará el día del juego.`);
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err: any) {
       console.error("Error guardando predicción:", err);
@@ -111,16 +124,17 @@ export default function Predictions() {
   });
 
   if (loading) {
-    return <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>Cargando partidos de hoy...</div>;
+    return <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>Cargando jornada de predicciones...</div>;
   }
 
-  const todayMatches = matches.filter(m => isMatchToday(m.date));
-  const displayMatches = viewAll ? matches : todayMatches;
+  // Partidos en ventana activa de votación (hasta 3 días antes y el día de hoy)
+  const windowMatches = matches.filter(m => isMatchInVotingWindow(m.date));
+  const displayMatches = viewAll ? matches : windowMatches;
 
   return (
     <div style={{ animation: 'slideUp 0.4s ease' }}>
       
-      {/* Toast de éxito */}
+      {/* Toast de confirmación */}
       {successToast && (
         <div style={{
           position: 'fixed',
@@ -155,14 +169,14 @@ export default function Predictions() {
       }}>
         <div>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🏈 Predicciones de Hoy
+            🏈 Quiniela Activa (Ventana de 3 Días)
           </h2>
           <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem', textTransform: 'capitalize' }}>
-            {todayFormatted}
+            Hoy: {todayFormatted}
           </p>
         </div>
 
-        {/* Toggle para ver solo hoy o todos los pendientes */}
+        {/* Toggle para ver ventana activa o todos */}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button
             onClick={() => setViewAll(false)}
@@ -177,7 +191,7 @@ export default function Predictions() {
               cursor: 'pointer'
             }}
           >
-            Solo Hoy ({todayMatches.length})
+            Próximos 3 Días ({windowMatches.length})
           </button>
           <button
             onClick={() => setViewAll(true)}
@@ -197,22 +211,22 @@ export default function Predictions() {
         </div>
       </div>
 
-      {/* Alerta de bloqueo permanente */}
+      {/* Banner de regla antifraude */}
       <div style={{
-        background: 'rgba(234, 179, 8, 0.1)',
-        border: '1px solid rgba(234, 179, 8, 0.25)',
+        background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.4) 100%)',
+        border: '1px solid rgba(59, 130, 246, 0.3)',
         borderRadius: '10px',
-        padding: '0.75rem 1rem',
+        padding: '0.85rem 1.25rem',
         marginBottom: '1.5rem',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.6rem',
-        fontSize: '0.85rem',
-        color: '#fef08a'
+        gap: '0.75rem',
+        fontSize: '0.88rem',
+        color: '#bfdbfe'
       }}>
-        <Lock size={16} color="#eab308" />
+        <Clock size={20} color="#60a5fa" style={{ flexShrink: 0 }} />
         <span>
-          <strong>Regla de Apuesta:</strong> Al confirmar tu pronóstico, este quedará <strong>bloqueado permanentemente</strong> y no podrá modificarse.
+          <strong>Regla de Votación:</strong> Los partidos se habilitan <strong>3 días antes</strong>. La votación se <strong>cierra automáticamente el mismo día del juego</strong>. ¡Asegura tu pronóstico con tiempo!
         </span>
       </div>
 
@@ -226,9 +240,9 @@ export default function Predictions() {
           border: '1px solid var(--border-color)'
         }}>
           <Calendar size={48} style={{ opacity: 0.4, margin: '0 auto 1rem' }} />
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos programados para el día de hoy</h3>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos en los próximos 3 días</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', maxWidth: '500px', margin: '0 auto 1.5rem' }}>
-            Los días sin partidos puedes revisar todo el calendario de las próximas jornadas en la pestaña de Próximos.
+            Los partidos se abrirán automáticamente para votar cuando falten 3 días para su fecha de juego.
           </p>
           <Link 
             to="/upcoming"
@@ -245,19 +259,24 @@ export default function Predictions() {
               fontSize: '0.95rem'
             }}
           >
-            📅 Ver Calendario de Próximos Partidos
+            📅 Ver Calendario Completo en Próximos
           </Link>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
           {displayMatches.map(match => {
-            const hasPrediction = !!predictions[match.id];
+            const userChoice = predictions[match.id];
+            const isLocked = isMatchVotingLocked(match.date);
+            const daysRemaining = getDaysUntilMatch(match.date);
+
             return (
               <MatchCard 
                 key={match.id} 
                 match={match} 
-                selectedTeamId={predictions[match.id]}
-                isLocked={hasPrediction}
+                selectedTeamId={userChoice}
+                isLocked={isLocked}
+                daysRemaining={daysRemaining}
+                lockReason={isLocked ? (userChoice ? 'VOTO CERRADO' : 'TIEMPO EXPIRADO') : undefined}
                 onSelectTeam={(teamId) => handleSelectTeamClick(match, teamId)}
               />
             );
@@ -265,7 +284,7 @@ export default function Predictions() {
         </div>
       )}
 
-      {/* Modal de Advertencia y Confirmación */}
+      {/* Modal de Confirmación */}
       {confirmModal && (
         <div style={{
           position: 'fixed',
@@ -291,13 +310,13 @@ export default function Predictions() {
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
             animation: 'slideUp 0.3s ease'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary-nfl)' }}>
               <AlertTriangle size={24} />
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>Confirmar Pronóstico</h3>
             </div>
 
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.25rem' }}>
-              Estás a punto de elegir al siguiente equipo como ganador:
+              Vas a seleccionar como ganador a:
             </p>
 
             {/* Tarjeta del equipo elegido */}
@@ -332,22 +351,22 @@ export default function Predictions() {
               );
             })()}
 
-            {/* Advertencia de Cierre */}
+            {/* Aviso de cierre automático el día del juego */}
             <div style={{
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(234, 179, 8, 0.1)',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
               borderRadius: '8px',
               padding: '0.85rem',
               marginBottom: '1.5rem',
               fontSize: '0.85rem',
-              color: '#fca5a5',
+              color: '#fef08a',
               display: 'flex',
               gap: '0.5rem',
               alignItems: 'flex-start'
             }}>
-              <Lock size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <Lock size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#eab308' }} />
               <span>
-                <strong>Aviso importante:</strong> Una vez que presiones "Aceptar y Bloquear", tu voto quedará cerrado y <strong>no podrás cambiar de equipo</strong>.
+                <strong>Regla de Cierre:</strong> Podrás ajustar tu elección durante la ventana activa. <strong>El mismo día del partido se bloqueará automáticamente</strong> para evitar cambios de último minuto.
               </span>
             </div>
 
@@ -374,7 +393,7 @@ export default function Predictions() {
                 style={{
                   padding: '0.75rem 1.25rem',
                   borderRadius: '8px',
-                  background: 'var(--accent-nfl)',
+                  background: 'var(--primary-nfl)',
                   color: 'white',
                   border: 'none',
                   fontWeight: 'bold',
@@ -385,8 +404,7 @@ export default function Predictions() {
                   gap: '0.4rem'
                 }}
               >
-                <Lock size={16} />
-                {saving ? 'Guardando...' : 'Aceptar y Bloquear'}
+                {saving ? 'Guardando...' : 'Confirmar Pronóstico'}
               </button>
             </div>
           </div>
