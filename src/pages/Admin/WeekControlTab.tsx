@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
-import { getWeekLabel, getWeekClosingDeadline, formatDeadlineText } from '../../services/dateUtils';
+import { getWeekLabel } from '../../services/dateUtils';
 import { Lock, Unlock, ShieldAlert } from 'lucide-react';
 import styles from './WeekControlTab.module.css';
 
@@ -145,7 +145,6 @@ export default function WeekControlTab() {
           {availableWeeks.map(w => {
             const wMatches = allMatches.filter(m => (m.week ?? 1) === w);
             const isLocked = wMatches.some(m => m.is_locked === true);
-            const deadline = getWeekClosingDeadline(wMatches);
 
             return (
               <div
@@ -163,11 +162,6 @@ export default function WeekControlTab() {
                 <div className={styles.matchCount}>
                   {wMatches.length} partidos programados
                 </div>
-                {deadline && (
-                  <div className={styles.deadline}>
-                    Límite sugerido: {formatDeadlineText(deadline)}
-                  </div>
-                )}
 
                 <div className={styles.actionFooter}>
                   {isLocked ? (

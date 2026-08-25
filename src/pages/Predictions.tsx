@@ -4,9 +4,7 @@ import MatchCard from '../components/MatchCard';
 import ConfirmPredictionModal from '../components/ConfirmPredictionModal';
 import { TEAMS } from '../services/mockData';
 import { 
-  getWeekClosingDeadline, 
   isWeekVotingClosed, 
-  formatDeadlineText,
   getWeekLabel 
 } from '../services/dateUtils';
 import { Lock, CheckCircle2, Clock } from 'lucide-react';
@@ -102,7 +100,7 @@ export default function Predictions() {
 
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta jornada ya ha sido cerrada.");
+      alert("⚠️ La votación para esta jornada ha sido cerrada.");
       setConfirmModal(null);
       return;
     }
@@ -140,9 +138,7 @@ export default function Predictions() {
   const availableWeeks = Array.from(new Set(matches.map(m => m.week))).sort((a, b) => a - b);
   const currentWeekMatches = matches.filter(m => m.week === selectedWeek);
 
-  const weekDeadline = getWeekClosingDeadline(currentWeekMatches);
   const isCurrentWeekClosed = isWeekVotingClosed(currentWeekMatches);
-  const isManuallyLocked = currentWeekMatches.some(m => m.isLocked === true);
 
   return (
     <div className={styles.container}>
@@ -161,7 +157,7 @@ export default function Predictions() {
           🏈 Quiniela Semanal
         </h2>
         <p className={styles.subtitle}>
-          Haz tus pronósticos por semana. La votación cierra el <strong>jueves anterior</strong> a la jornada o por decisión del Administrador.
+          Haz tus pronósticos por semana. La apertura y cierre de las votaciones es administrada por el Administrador.
         </p>
       </div>
 
@@ -200,8 +196,8 @@ export default function Predictions() {
             </div>
             <div className={isCurrentWeekClosed ? styles.statusSubClosed : styles.statusSubOpen}>
               {isCurrentWeekClosed
-                ? (isManuallyLocked ? 'Esta semana fue bloqueada por el Administrador.' : `El plazo límite venció el ${formatDeadlineText(weekDeadline)}.`)
-                : `Cierre de votación: ${formatDeadlineText(weekDeadline)}.`}
+                ? 'Esta semana ha sido bloqueada por el Administrador.'
+                : 'La votación se encuentra disponible para realizar tus elecciones.'}
             </div>
           </div>
         </div>
@@ -236,13 +232,12 @@ export default function Predictions() {
         </div>
       )}
 
-      {/* Modal de Confirmación modularizado */}
+      {/* Modal de Confirmación */}
       {confirmModal && (
         <ConfirmPredictionModal
           match={confirmModal.match}
           teamId={confirmModal.teamId}
           saving={saving}
-          weekDeadline={weekDeadline}
           onCancel={() => setConfirmModal(null)}
           onConfirm={handleConfirmPrediction}
         />

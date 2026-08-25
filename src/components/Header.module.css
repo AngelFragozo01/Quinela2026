@@ -55,6 +55,24 @@
   background-color: var(--primary-nfl);
 }
 
+.adminLink {
+  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  font-weight: 700;
+}
+
+.adminLink:hover {
+  background: rgba(245, 158, 11, 0.3);
+  color: #ffe066 !important;
+}
+
+.adminLink.active {
+  background: #f59e0b !important;
+  color: #000000 !important;
+  border-color: #f59e0b;
+}
+
 .userSection {
   display: flex;
   align-items: center;

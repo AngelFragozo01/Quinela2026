@@ -32,66 +32,24 @@ export function getMatchLocalDate(dateStr: string): Date | null {
 }
 
 /**
- * Calcula la fecha y hora límite de votación para una semana dada.
- * Regla: La votación se cierra el jueves anterior al inicio de los partidos de esa semana a las 23:59:59.
- * Por ejemplo: Si los partidos de la Semana 1 empiezan el miércoles 9 de septiembre,
- * el jueves anterior es el jueves 3 de septiembre a las 23:59:59.
- */
-export function getWeekClosingDeadline(matchesInWeek: any[]): Date | null {
-  if (!matchesInWeek || matchesInWeek.length === 0) return null;
-
-  let earliestDate: Date | null = null;
-  for (const m of matchesInWeek) {
-    const dateStr = m.date || m.match_date;
-    const d = getMatchLocalDate(dateStr);
-    if (d) {
-      if (!earliestDate || d.getTime() < earliestDate.getTime()) {
-        earliestDate = d;
-      }
-    }
-  }
-
-  if (!earliestDate) return null;
-
-  const deadline = new Date(earliestDate.getTime());
-  deadline.setDate(deadline.getDate() - 1);
-  while (deadline.getDay() !== 4) { // 4 = Jueves
-    deadline.setDate(deadline.getDate() - 1);
-  }
-
-  deadline.setHours(23, 59, 59, 999);
-  return deadline;
-}
-
-/**
- * Determina si la votación para una semana completa ya está cerrada.
- * Se considera cerrada si:
- * 1. Fue bloqueada manualmente por el Admin (is_locked = true), O
- * 2. Ya pasó el plazo límite del jueves anterior.
+ * Determina si la votación para una semana completa está cerrada.
+ * Se controla exclusivamente de forma manual por el Administrador (is_locked = true).
  */
 export function isWeekVotingClosed(matchesInWeek: any[]): boolean {
   if (!matchesInWeek || matchesInWeek.length === 0) return false;
-
-  const isManuallyLocked = matchesInWeek.some(m => m.isLocked === true || m.is_locked === true);
-  if (isManuallyLocked) return true;
-
-  const deadline = getWeekClosingDeadline(matchesInWeek);
-  if (!deadline) return false;
-  return new Date().getTime() >= deadline.getTime();
+  return matchesInWeek.some(m => m.isLocked === true || m.is_locked === true);
 }
 
 /**
- * Formatea el texto de la fecha límite para la interfaz.
+ * Formatea el texto de estado de cierre para la interfaz.
  */
-export function formatDeadlineText(deadline: Date | null, isManuallyLocked?: boolean): string {
-  if (isManuallyLocked) return 'Bloqueada manualmente por el Administrador';
-  if (!deadline) return 'Por definir';
-  const dateStr = deadline.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-  return `${dateStr} a las 23:59 h`;
+export function formatDeadlineText(isManuallyLocked?: boolean): string {
+  if (isManuallyLocked) return 'Bloqueada por el Administrador';
+  return 'Votación Abierta';
 }
 
 /**
- * Calcula cuántos días faltan para una fecha límite o partido.
+ * Calcula cuántos días faltan para un partido.
  */
 export function getDaysUntilMatch(dateStr: string): number {
   const matchDate = getMatchLocalDate(dateStr);

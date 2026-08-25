@@ -1,13 +1,12 @@
 import styles from './ConfirmPredictionModal.module.css';
 import { TEAMS } from '../services/mockData';
-import { getWeekLabel, formatDeadlineText } from '../services/dateUtils';
+import { getWeekLabel } from '../services/dateUtils';
 import { AlertTriangle, Lock } from 'lucide-react';
 
 interface ConfirmPredictionModalProps {
   match: any;
   teamId: string;
   saving: boolean;
-  weekDeadline: Date | null;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -16,7 +15,6 @@ export default function ConfirmPredictionModal({
   match,
   teamId,
   saving,
-  weekDeadline,
   onCancel,
   onConfirm
 }: ConfirmPredictionModalProps) {
@@ -55,11 +53,11 @@ export default function ConfirmPredictionModal({
           </div>
         </div>
 
-        {/* Aviso de cierre */}
+        {/* Aviso de control de votación */}
         <div className={styles.warningBox}>
           <Lock size={16} className={styles.warningIcon} />
           <span>
-            <strong>Fecha límite:</strong> Esta jornada se cerrará el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
+            <strong>Nota:</strong> Podrás modificar tu pronóstico libremente mientras el Administrador mantenga abierta esta jornada.
           </span>
         </div>
 

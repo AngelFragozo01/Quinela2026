@@ -35,7 +35,7 @@ export default function Header({ user, role, onLogout }: HeaderProps) {
             <Calendar size={18} /> Historial
           </Link>
           {role === 'admin' && (
-            <Link to="/admin" className={`${styles.navLink} ${location.pathname === '/admin' ? styles.active : ''}`} style={{ color: 'var(--primary-nfl)' }}>
+            <Link to="/admin" className={`${styles.navLink} ${styles.adminLink} ${location.pathname === '/admin' ? styles.active : ''}`}>
               <Settings size={18} /> Admin
             </Link>
           )}
