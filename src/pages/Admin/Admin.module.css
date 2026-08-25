@@ -1,0 +1,46 @@
+.container {
+  animation: slideUp 0.4s ease;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.title {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tabBtn {
+  background: none;
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tabBtn:hover {
+  color: var(--text-main);
+}
+
+.activeTab {
+  color: var(--text-main);
+  border-bottom-color: var(--primary-nfl);
+}

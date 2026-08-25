@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { getWeekLabel } from '../services/dateUtils';
+import styles from './History.module.css';
 
 export default function History() {
   const [finishedMatches, setFinishedMatches] = useState<any[]>([]);
@@ -32,7 +33,6 @@ export default function History() {
       }
     }
 
-    // Obtener partidos finalizados ordenados por semana descendente y fecha
     const { data: matchesData } = await supabase
       .from('matches')
       .select('*')
@@ -76,10 +76,8 @@ export default function History() {
     );
   }
 
-  // Lista de semanas con partidos finalizados
   const availableWeeks = Array.from(new Set(finishedMatches.map(m => m.week))).sort((a, b) => a - b);
 
-  // Agrupar por semana
   const matchesByWeek: Record<number, any[]> = availableWeeks.reduce((acc, weekNum) => {
     if (selectedWeek === 'all' || selectedWeek === weekNum) {
       acc[weekNum] = finishedMatches.filter(m => m.week === weekNum);
@@ -87,7 +85,6 @@ export default function History() {
     return acc;
   }, {} as Record<number, any[]>);
 
-  // Calcular estadísticas de la semana seleccionada (o total)
   const currentWeekMatches = selectedWeek === 'all' 
     ? finishedMatches 
     : finishedMatches.filter(m => m.week === selectedWeek);
@@ -96,39 +93,21 @@ export default function History() {
   const totalPoints = totalHits * 10;
 
   return (
-    <div style={{ animation: 'slideUp 0.4s ease' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>
           🏆 Historial de Resultados por Semana
         </h2>
-        <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
+        <p className={styles.subtitle}>
           Consulta los marcadores finales oficiales y tus aciertos en cada jornada.
         </p>
       </div>
 
       {/* Selector de Semanas con scroll horizontal */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '0.5rem', 
-        overflowX: 'auto', 
-        paddingBottom: '0.75rem', 
-        marginBottom: '1.25rem',
-        scrollbarWidth: 'thin'
-      }}>
+      <div className={styles.weekSelector}>
         <button
           onClick={() => setSelectedWeek('all')}
-          style={{
-            padding: '0.5rem 1rem',
-            borderRadius: '20px',
-            border: selectedWeek === 'all' ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
-            background: selectedWeek === 'all' ? 'var(--primary-nfl)' : 'var(--bg-card)',
-            color: selectedWeek === 'all' ? 'white' : 'var(--text-muted)',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
+          className={`${styles.weekBtn} ${selectedWeek === 'all' ? styles.weekBtnActive : ''}`}
         >
           Todas ({finishedMatches.length})
         </button>
@@ -138,18 +117,7 @@ export default function History() {
             <button
               key={w}
               onClick={() => setSelectedWeek(w)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '20px',
-                border: selectedWeek === w ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
-                background: selectedWeek === w ? 'var(--primary-nfl)' : 'var(--bg-card)',
-                color: selectedWeek === w ? 'white' : 'var(--text-muted)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
+              className={`${styles.weekBtn} ${selectedWeek === w ? styles.weekBtnActive : ''}`}
             >
               {getWeekLabel(w)} ({count})
             </button>
@@ -158,41 +126,22 @@ export default function History() {
       </div>
 
       {/* Resumen de aciertos de la selección */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        padding: '1rem 1.5rem',
-        marginBottom: '2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
+      <div className={styles.performanceCard}>
         <div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <span className={styles.perfLabel}>
             Rendimiento {selectedWeek === 'all' ? 'Total' : getWeekLabel(selectedWeek)}
           </span>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginTop: '0.2rem' }}>
+          <div className={styles.perfValue}>
             {totalHits} aciertos de {currentWeekMatches.length} partidos
           </div>
         </div>
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          color: '#10b981',
-          padding: '0.4rem 1rem',
-          borderRadius: '20px',
-          fontWeight: 800,
-          fontSize: '1.1rem'
-        }}>
+        <div className={styles.pointsBadge}>
           +{totalPoints} pts
         </div>
       </div>
 
       {/* Partidos agrupados por semana */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      <div className={styles.weeksList}>
         {Object.keys(matchesByWeek).sort((a, b) => Number(b) - Number(a)).map(weekKey => {
           const weekNum = Number(weekKey);
           const weekMatches: any[] = matchesByWeek[weekNum];
@@ -200,30 +149,16 @@ export default function History() {
 
           return (
             <section key={weekNum}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.75rem', 
-                marginBottom: '1.25rem',
-                borderBottom: '1px solid var(--border-color)',
-                paddingBottom: '0.5rem'
-              }}>
-                <span style={{ 
-                  background: 'var(--accent-nfl)', 
-                  color: 'white', 
-                  padding: '0.2rem 0.75rem', 
-                  borderRadius: '8px', 
-                  fontWeight: 800, 
-                  fontSize: '0.9rem' 
-                }}>
+              <div className={styles.sectionHeader}>
+                <span className={styles.weekBadge}>
                   {getWeekLabel(weekNum)}
                 </span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <span className={styles.matchCount}>
                   {weekMatches.length} partidos finalizados
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+              <div className={styles.grid}>
                 {weekMatches.map((match: any) => {
                   const userPred = predictions[match.id];
                   const isHit = userPred && userPred === match.winnerTeamId;
@@ -231,21 +166,7 @@ export default function History() {
                   return (
                     <div key={match.id} style={{ position: 'relative' }}>
                       {userPred && (
-                        <div 
-                          style={{ 
-                            position: 'absolute', 
-                            top: '-10px', 
-                            right: '12px', 
-                            zIndex: 10,
-                            padding: '0.25rem 0.75rem', 
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            background: isHit ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
-                            color: 'white',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
-                          }}
-                        >
+                        <div className={`${styles.resultBadge} ${isHit ? styles.resultHit : styles.resultMiss}`}>
                           {isHit ? '🎯 ¡Acierto! (+10 pts)' : '❌ Fallado'}
                         </div>
                       )}

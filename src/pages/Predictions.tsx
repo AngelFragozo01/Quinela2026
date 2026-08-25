@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
+import ConfirmPredictionModal from '../components/ConfirmPredictionModal';
 import { TEAMS } from '../services/mockData';
 import { 
   getWeekClosingDeadline, 
@@ -8,7 +9,8 @@ import {
   formatDeadlineText,
   getWeekLabel 
 } from '../services/dateUtils';
-import { AlertTriangle, Lock, CheckCircle2, Clock } from 'lucide-react';
+import { Lock, CheckCircle2, Clock } from 'lucide-react';
+import styles from './Predictions.module.css';
 
 interface ConfirmModalData {
   match: any;
@@ -71,7 +73,6 @@ export default function Predictions() {
       }));
       setMatches(formattedMatches);
 
-      // Determinar la semana activa por defecto (la primera semana abierta)
       const availableWeeks = Array.from(new Set(formattedMatches.map(m => m.week))).sort((a, b) => a - b);
       if (availableWeeks.length > 0) {
         const openWeek = availableWeeks.find(w => {
@@ -136,62 +137,37 @@ export default function Predictions() {
     return <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>Cargando jornada de predicciones...</div>;
   }
 
-  // Lista de semanas disponibles
   const availableWeeks = Array.from(new Set(matches.map(m => m.week))).sort((a, b) => a - b);
   const currentWeekMatches = matches.filter(m => m.week === selectedWeek);
 
-  // Calcular estado y fecha límite de la semana seleccionada
   const weekDeadline = getWeekClosingDeadline(currentWeekMatches);
   const isCurrentWeekClosed = isWeekVotingClosed(currentWeekMatches);
   const isManuallyLocked = currentWeekMatches.some(m => m.isLocked === true);
 
   return (
-    <div style={{ animation: 'slideUp 0.4s ease' }}>
+    <div className={styles.container}>
       
       {/* Toast de confirmación */}
       {successToast && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          zIndex: 1000,
-          background: '#065f46',
-          color: '#d1fae5',
-          border: '1px solid #10b981',
-          padding: '0.85rem 1.25rem',
-          borderRadius: '10px',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontWeight: 600,
-          animation: 'slideUp 0.3s ease'
-        }}>
+        <div className={styles.toast}>
           <CheckCircle2 size={20} color="#10b981" />
           <span>{successToast}</span>
         </div>
       )}
 
       {/* Cabecera */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>
           🏈 Quiniela Semanal
         </h2>
-        <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
+        <p className={styles.subtitle}>
           Haz tus pronósticos por semana. La votación cierra el <strong>jueves anterior</strong> a la jornada o por decisión del Administrador.
         </p>
       </div>
 
       {/* Selector de Semanas */}
       {availableWeeks.length > 0 && (
-        <div style={{ 
-          display: 'flex', 
-          gap: '0.5rem', 
-          overflowX: 'auto', 
-          paddingBottom: '1rem', 
-          marginBottom: '1.5rem',
-          scrollbarWidth: 'thin'
-        }}>
+        <div className={styles.weekSelector}>
           {availableWeeks.map(w => {
             const wMatches = matches.filter(m => m.week === w);
             const isClosed = isWeekVotingClosed(wMatches);
@@ -200,21 +176,7 @@ export default function Predictions() {
               <button
                 key={w}
                 onClick={() => setSelectedWeek(w)}
-                style={{
-                  padding: '0.5rem 1.15rem',
-                  borderRadius: '20px',
-                  border: selectedWeek === w ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
-                  background: selectedWeek === w ? 'var(--primary-nfl)' : 'var(--bg-card)',
-                  color: selectedWeek === w ? 'white' : 'var(--text-muted)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
+                className={`${styles.weekBtn} ${selectedWeek === w ? styles.weekBtnActive : ''}`}
               >
                 {isClosed && <Lock size={12} />}
                 <span>{getWeekLabel(w)}</span>
@@ -225,37 +187,18 @@ export default function Predictions() {
       )}
 
       {/* Banner de Estado de la Semana */}
-      <div style={{
-        background: isCurrentWeekClosed 
-          ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(15, 23, 42, 0.5) 100%)'
-          : 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.5) 100%)',
-        border: isCurrentWeekClosed ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
-        borderRadius: '12px',
-        padding: '1rem 1.25rem',
-        marginBottom: '2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{
-            background: isCurrentWeekClosed ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-            padding: '0.6rem',
-            borderRadius: '10px',
-            color: isCurrentWeekClosed ? '#f87171' : '#34d399',
-            display: 'flex'
-          }}>
+      <div className={`${styles.statusBanner} ${isCurrentWeekClosed ? styles.statusBannerClosed : styles.statusBannerOpen}`}>
+        <div className={styles.statusLeft}>
+          <div className={isCurrentWeekClosed ? styles.statusIconBoxClosed : styles.statusIconBoxOpen}>
             {isCurrentWeekClosed ? <Lock size={24} /> : <Clock size={24} />}
           </div>
           <div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white' }}>
+            <div className={styles.statusTitle}>
               {isCurrentWeekClosed 
                 ? `🔒 Votación Cerrada • ${getWeekLabel(selectedWeek)}`
                 : `🟢 Votación Abierta • ${getWeekLabel(selectedWeek)}`}
             </div>
-            <div style={{ fontSize: '0.85rem', color: isCurrentWeekClosed ? '#fca5a5' : '#a7f3d0', marginTop: '0.2rem' }}>
+            <div className={isCurrentWeekClosed ? styles.statusSubClosed : styles.statusSubOpen}>
               {isCurrentWeekClosed
                 ? (isManuallyLocked ? 'Esta semana fue bloqueada por el Administrador.' : `El plazo límite venció el ${formatDeadlineText(weekDeadline)}.`)
                 : `Cierre de votación: ${formatDeadlineText(weekDeadline)}.`}
@@ -263,26 +206,19 @@ export default function Predictions() {
           </div>
         </div>
 
-        <div style={{
-          fontSize: '0.82rem',
-          color: 'var(--text-muted)',
-          background: 'rgba(0,0,0,0.25)',
-          padding: '0.4rem 0.8rem',
-          borderRadius: '8px',
-          fontWeight: 600
-        }}>
+        <div className={styles.matchBadgeCount}>
           {currentWeekMatches.length} partidos en esta jornada
         </div>
       </div>
 
       {/* Partidos de la Semana */}
       {currentWeekMatches.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+        <div className={styles.emptyState}>
           <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos pendientes en {getWeekLabel(selectedWeek)}</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Selecciona otra semana en la parte superior.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+        <div className={styles.grid}>
           {currentWeekMatches.map(match => {
             const userChoice = predictions[match.id];
 
@@ -300,131 +236,16 @@ export default function Predictions() {
         </div>
       )}
 
-      {/* Modal de Confirmación */}
+      {/* Modal de Confirmación modularizado */}
       {confirmModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(6px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '1rem'
-        }}>
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '16px',
-            maxWidth: '460px',
-            width: '100%',
-            padding: '1.75rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            animation: 'slideUp 0.3s ease'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary-nfl)' }}>
-              <AlertTriangle size={24} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>Confirmar Pronóstico</h3>
-            </div>
-
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.25rem' }}>
-              Vas a seleccionar como ganador a:
-            </p>
-
-            {/* Tarjeta del equipo elegido */}
-            {(() => {
-              const chosenTeam = TEAMS[confirmModal.teamId];
-              const homeTeam = TEAMS[confirmModal.match.homeTeamId];
-              const awayTeam = TEAMS[confirmModal.match.awayTeamId];
-              const rivalTeam = confirmModal.teamId === homeTeam?.id ? awayTeam : homeTeam;
-
-              return (
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: `2px solid ${chosenTeam?.color || 'var(--primary-nfl)'}`,
-                  borderRadius: '12px',
-                  padding: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginBottom: '1.25rem',
-                  boxShadow: `0 0 20px ${chosenTeam?.color ? `${chosenTeam.color}33` : 'transparent'}`
-                }}>
-                  <img src={chosenTeam?.logo} alt={chosenTeam?.name} style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
-                  <div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>
-                      {chosenTeam?.name}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      vs {rivalTeam?.name} • {getWeekLabel(confirmModal.match.week ?? 1)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Aviso de cierre */}
-            <div style={{
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '8px',
-              padding: '0.85rem',
-              marginBottom: '1.5rem',
-              fontSize: '0.85rem',
-              color: '#bfdbfe',
-              display: 'flex',
-              gap: '0.5rem',
-              alignItems: 'flex-start'
-            }}>
-              <Lock size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#60a5fa' }} />
-              <span>
-                <strong>Fecha límite:</strong> Esta jornada se cerrará el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
-              </span>
-            </div>
-
-            {/* Botones de Acción */}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setConfirmModal(null)}
-                disabled={saving}
-                style={{
-                  padding: '0.75rem 1.25rem',
-                  borderRadius: '8px',
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  border: '1px solid var(--border-color)',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmPrediction}
-                disabled={saving}
-                style={{
-                  padding: '0.75rem 1.25rem',
-                  borderRadius: '8px',
-                  background: 'var(--primary-nfl)',
-                  color: 'white',
-                  border: 'none',
-                  fontWeight: 'bold',
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  opacity: saving ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem'
-                }}
-              >
-                {saving ? 'Guardando...' : 'Confirmar Pronóstico'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmPredictionModal
+          match={confirmModal.match}
+          teamId={confirmModal.teamId}
+          saving={saving}
+          weekDeadline={weekDeadline}
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={handleConfirmPrediction}
+        />
       )}
     </div>
   );

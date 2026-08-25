@@ -1,0 +1,116 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.heading {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.message {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+.matchCard {
+  background: var(--bg-card);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.weekBadge {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.dateText {
+  text-transform: uppercase;
+}
+
+.matchTeams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.teamBox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.teamBoxReverse {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: row-reverse;
+}
+
+.teamLogo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.teamName {
+  font-weight: bold;
+}
+
+.scoreInput {
+  width: 60px;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: var(--bg-dark);
+  color: white;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.divider {
+  font-weight: bold;
+  color: var(--text-muted);
+}
+
+.finalizeBtn {
+  padding: 0.75rem;
+  background: var(--accent-nfl);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: background 0.2s ease;
+}
+
+.finalizeBtn:hover {
+  background: var(--accent-hover);
+}

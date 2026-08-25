@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { getWeekLabel } from '../services/dateUtils';
+import styles from './Upcoming.module.css';
 
 export default function Upcoming() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -52,42 +53,24 @@ export default function Upcoming() {
   const currentWeekMatches = matches.filter(m => m.week === selectedWeek);
 
   return (
-    <div style={{ animation: 'slideUp 0.4s ease' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>
           📅 Calendario de Partidos por Semana
         </h2>
-        <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
+        <p className={styles.subtitle}>
           Consulta el calendario oficial de pretemporada y temporada regular organizado por semanas.
         </p>
       </div>
 
       {/* Selector de Semanas exclusivo */}
       {availableWeeks.length > 0 && (
-        <div style={{ 
-          display: 'flex', 
-          gap: '0.5rem', 
-          overflowX: 'auto', 
-          paddingBottom: '1rem', 
-          marginBottom: '1.5rem',
-          scrollbarWidth: 'thin'
-        }}>
+        <div className={styles.weekSelector}>
           {availableWeeks.map(w => (
             <button
               key={w}
               onClick={() => setSelectedWeek(w)}
-              style={{
-                padding: '0.5rem 1.15rem',
-                borderRadius: '20px',
-                border: selectedWeek === w ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
-                background: selectedWeek === w ? 'var(--primary-nfl)' : 'var(--bg-card)',
-                color: selectedWeek === w ? 'white' : 'var(--text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
+              className={`${styles.weekBtn} ${selectedWeek === w ? styles.weekBtnActive : ''}`}
             >
               {getWeekLabel(w)}
             </button>
@@ -96,36 +79,22 @@ export default function Upcoming() {
       )}
 
       {matches.length === 0 ? (
-        <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>
+        <div className={styles.emptyState}>
           <p style={{ fontSize: '1.2rem' }}>No hay próximos partidos cargados en el calendario.</p>
           <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>El Administrador puede cargar el calendario de la temporada desde el panel de Admin.</p>
         </div>
       ) : (
         <section>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.75rem', 
-            marginBottom: '1.25rem',
-            borderBottom: '1px solid var(--border-color)',
-            paddingBottom: '0.5rem'
-          }}>
-            <span style={{ 
-              background: 'linear-gradient(135deg, var(--primary-nfl) 0%, #1e40af 100%)', 
-              color: 'white', 
-              padding: '0.25rem 0.85rem', 
-              borderRadius: '8px', 
-              fontWeight: 800, 
-              fontSize: '0.95rem' 
-            }}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.badge}>
               {getWeekLabel(selectedWeek)}
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            <span className={styles.matchCount}>
               {currentWeekMatches.length} partidos programados
             </span>
           </div>
 
-          <div style={{ display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+          <div className={styles.grid}>
             {currentWeekMatches.map(match => (
               <MatchCard
                 key={match.id}

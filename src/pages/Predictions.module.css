@@ -1,0 +1,154 @@
+.container {
+  animation: slideUp 0.4s ease;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: #065f46;
+  color: #d1fae5;
+  border: 1px solid #10b981;
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  animation: slideUp 0.3s ease;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.weekSelector {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  scrollbar-width: thin;
+}
+
+.weekBtn {
+  padding: 0.5rem 1.15rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.weekBtnActive {
+  border-color: var(--primary-nfl);
+  background: var(--primary-nfl);
+  color: white;
+}
+
+.statusBanner {
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.statusBannerOpen {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.5) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.statusBannerClosed {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(15, 23, 42, 0.5) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.statusIconBoxOpen {
+  background: rgba(16, 185, 129, 0.2);
+  padding: 0.6rem;
+  border-radius: 10px;
+  color: #34d399;
+  display: flex;
+}
+
+.statusIconBoxClosed {
+  background: rgba(239, 68, 68, 0.2);
+  padding: 0.6rem;
+  border-radius: 10px;
+  color: #f87171;
+  display: flex;
+}
+
+.statusTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: white;
+}
+
+.statusSubOpen {
+  font-size: 0.85rem;
+  color: #a7f3d0;
+  margin-top: 0.2rem;
+}
+
+.statusSubClosed {
+  font-size: 0.85rem;
+  color: #fca5a5;
+  margin-top: 0.2rem;
+}
+
+.matchBadgeCount {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.25);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
