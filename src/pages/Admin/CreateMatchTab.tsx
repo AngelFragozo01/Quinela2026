@@ -18,17 +18,33 @@ export default function CreateMatchTab() {
     setCreateMessage('');
 
     try {
+      const cleanDate = matchDate.split('T')[0].trim();
+      let isoDateString: string;
+
+      // Si el usuario especificó una hora particular en datetime-local
+      if (matchDate.includes('T') && matchDate.split('T')[1]) {
+        const timePart = matchDate.split('T')[1];
+        if (timePart.includes(':')) {
+          isoDateString = `${cleanDate}T${timePart}:00.000Z`;
+        } else {
+          isoDateString = `${cleanDate}T18:00:00.000Z`;
+        }
+      } else {
+        // Por defecto guardar en 18:00 UTC para evitar cualquier descalce de zona horaria
+        isoDateString = `${cleanDate}T18:00:00.000Z`;
+      }
+
       const { error } = await supabase.from('matches').insert({
         home_team_id: homeTeam,
         away_team_id: awayTeam,
-        match_date: new Date(matchDate).toISOString(),
+        match_date: isoDateString,
         week: matchWeek,
         is_finished: false,
         is_locked: false,
       });
 
       if (error) throw error;
-      setCreateMessage(`✅ Partido de ${getWeekLabel(matchWeek)} creado exitosamente.`);
+      setCreateMessage(`✅ Partido de ${getWeekLabel(matchWeek)} creado exitosamente para el día ${cleanDate}.`);
       setMatchDate('');
     } catch (err: any) {
       setCreateMessage(`❌ Error al crear partido: ${err.message}`);
@@ -52,7 +68,7 @@ export default function CreateMatchTab() {
       <form onSubmit={handleCreateMatch} className={styles.form}>
         <div className={styles.row}>
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Local</label>
+            <label className={styles.label}>Equipo Local</label>
             <select 
               value={homeTeam} 
               onChange={e => setHomeTeam(e.target.value)}
@@ -62,7 +78,7 @@ export default function CreateMatchTab() {
             </select>
           </div>
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Visitante</label>
+            <label className={styles.label}>Equipo Visitante</label>
             <select 
               value={awayTeam} 
               onChange={e => setAwayTeam(e.target.value)}
@@ -95,9 +111,9 @@ export default function CreateMatchTab() {
           </div>
 
           <div className={styles.fieldGroupLarge}>
-            <label className={styles.label}>Fecha y Hora</label>
+            <label className={styles.label}>Fecha del Partido</label>
             <input 
-              type="datetime-local" 
+              type="date" 
               required
               value={matchDate}
               onChange={e => setMatchDate(e.target.value)}

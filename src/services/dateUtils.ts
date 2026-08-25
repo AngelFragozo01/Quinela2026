@@ -17,6 +17,7 @@ export function getWeekLabel(week: number): string {
 
 /**
  * Obtiene el objeto Date local a medianoche correspondiente a la fecha del partido.
+ * Extrae siempre el año, mes y día de forma literal para evitar desfases por zona horaria.
  */
 export function getMatchLocalDate(dateStr: string): Date | null {
   if (!dateStr) return null;
@@ -52,7 +53,6 @@ export function getWeekClosingDeadline(matchesInWeek: any[]): Date | null {
 
   if (!earliestDate) return null;
 
-  // Retroceder hasta encontrar el jueves previo al inicio de la jornada
   const deadline = new Date(earliestDate.getTime());
   deadline.setDate(deadline.getDate() - 1);
   while (deadline.getDay() !== 4) { // 4 = Jueves
@@ -111,23 +111,28 @@ export function formatMatchDate(dateStr: string): { formattedDate: string; forma
   if (!dateStr) return { formattedDate: '', formattedTime: '' };
 
   try {
-    if (dateStr.includes('T00:00:00') || /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
-      const cleanDate = dateStr.split('T')[0].trim();
-      const [year, month, day] = cleanDate.split('-').map(Number);
+    const cleanDate = dateStr.split('T')[0].trim();
+    const [year, month, day] = cleanDate.split('-').map(Number);
+    
+    if (year && month && day) {
       const localDate = new Date(year, month - 1, day, 12, 0, 0);
+      
+      let formattedTime = 'TBD';
+      if (dateStr.includes('T') && !dateStr.includes('T18:00:00') && !dateStr.includes('T00:00:00')) {
+        const timePart = dateStr.split('T')[1].split('.')[0];
+        if (timePart && timePart !== '00:00:00') {
+          const [h, m] = timePart.split(':');
+          formattedTime = `${h}:${m}`;
+        }
+      }
 
       return {
         formattedDate: localDate.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' }),
-        formattedTime: 'TBD'
+        formattedTime
       };
     }
 
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) {
-      const cleanDate = dateStr.split('T')[0].trim();
-      return { formattedDate: cleanDate, formattedTime: '' };
-    }
-
     return {
       formattedDate: d.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' }),
       formattedTime: d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
