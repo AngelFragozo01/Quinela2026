@@ -18,6 +18,7 @@ export interface Match {
   date: string; // ISO String
   week?: number;
   isFinished: boolean;
+  isLocked?: boolean;
   homeScore?: number;
   awayScore?: number;
   winnerTeamId?: string | null;

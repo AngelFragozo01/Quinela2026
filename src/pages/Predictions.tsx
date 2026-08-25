@@ -63,16 +63,16 @@ export default function Predictions() {
         date: m.match_date,
         week: m.week || 1,
         isFinished: m.is_finished,
+        isLocked: m.is_locked,
         homeScore: m.home_score,
         awayScore: m.away_score,
         winnerTeamId: m.winner_team_id
       }));
       setMatches(formattedMatches);
 
-      // Determinar la semana activa por defecto
+      // Determinar la semana activa por defecto (la primera semana abierta)
       const availableWeeks = Array.from(new Set(formattedMatches.map(m => m.week))).sort((a, b) => a - b);
       if (availableWeeks.length > 0) {
-        // Buscar la primera semana cuya votación aún no haya cerrado
         const openWeek = availableWeeks.find(w => {
           const weekMatches = formattedMatches.filter(m => m.week === w);
           return !isWeekVotingClosed(weekMatches);
@@ -84,10 +84,10 @@ export default function Predictions() {
   };
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
-    // Verificar si la semana ya cerró
+    // Verificar si la semana está cerrada (manual o por fecha límite)
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta semana ya está cerrada.");
+      alert("⚠️ La votación para esta semana se encuentra cerrada.");
       return;
     }
 
@@ -104,7 +104,7 @@ export default function Predictions() {
 
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta semana cerró el jueves anterior a la jornada.");
+      alert("⚠️ La votación para esta semana ya ha sido cerrada.");
       setConfirmModal(null);
       return;
     }
@@ -143,9 +143,10 @@ export default function Predictions() {
   const availableWeeks = Array.from(new Set(matches.map(m => m.week))).sort((a, b) => a - b);
   const currentWeekMatches = matches.filter(m => m.week === selectedWeek);
 
-  // Calcular la fecha límite de la semana seleccionada
+  // Calcular estado y fecha límite de la semana seleccionada
   const weekDeadline = getWeekClosingDeadline(currentWeekMatches);
   const isCurrentWeekClosed = isWeekVotingClosed(currentWeekMatches);
+  const isManuallyLocked = currentWeekMatches.some(m => m.isLocked === true);
 
   return (
     <div style={{ animation: 'slideUp 0.4s ease' }}>
@@ -180,7 +181,7 @@ export default function Predictions() {
           🏈 Quiniela Semanal
         </h2>
         <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
-          Haz tus pronósticos por semana. Todas las votaciones cierran el <strong>jueves anterior</strong> a la jornada.
+          Haz tus pronósticos por semana. La votación cierra el <strong>jueves anterior</strong> a la jornada o por decisión del Administrador.
         </p>
       </div>
 
@@ -259,7 +260,7 @@ export default function Predictions() {
             </div>
             <div style={{ fontSize: '0.85rem', color: isCurrentWeekClosed ? '#fca5a5' : '#a7f3d0', marginTop: '0.2rem' }}>
               {isCurrentWeekClosed
-                ? `El plazo límite venció el ${formatDeadlineText(weekDeadline)}.`
+                ? (isManuallyLocked ? 'Esta semana fue bloqueada por el Administrador.' : `El plazo límite venció el ${formatDeadlineText(weekDeadline)}.`)
                 : `Cierre de votación: ${formatDeadlineText(weekDeadline)}.`}
             </div>
           </div>
@@ -294,7 +295,7 @@ export default function Predictions() {
                 match={match} 
                 selectedTeamId={userChoice}
                 isLocked={isCurrentWeekClosed}
-                lockReason={isCurrentWeekClosed ? (userChoice ? 'VOTO CERRADO' : 'TIEMPO EXPIRADO') : undefined}
+                lockReason={isCurrentWeekClosed ? (userChoice ? 'VOTO CERRADO' : 'BLOQUEADO') : undefined}
                 onSelectTeam={(teamId) => handleSelectTeamClick(match, teamId)}
               />
             );
@@ -369,7 +370,7 @@ export default function Predictions() {
               );
             })()}
 
-            {/* Aviso de cierre el jueves previo */}
+            {/* Aviso de cierre */}
             <div style={{
               background: 'rgba(59, 130, 246, 0.1)',
               border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -384,7 +385,7 @@ export default function Predictions() {
             }}>
               <Lock size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#60a5fa' }} />
               <span>
-                <strong>Fecha límite:</strong> Esta semana se cerrará automáticamente el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
+                <strong>Fecha límite:</strong> Esta semana se cerrará el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
               </span>
             </div>
 

@@ -52,8 +52,16 @@ export function getWeekClosingDeadline(matchesInWeek: any[]): Date | null {
 
 /**
  * Determina si la votación para una semana completa ya está cerrada.
+ * Se considera cerrada si:
+ * 1. Fue bloqueada manualmente por el Admin (is_locked = true), O
+ * 2. Ya pasó el plazo límite del jueves anterior.
  */
 export function isWeekVotingClosed(matchesInWeek: any[]): boolean {
+  if (!matchesInWeek || matchesInWeek.length === 0) return false;
+
+  const isManuallyLocked = matchesInWeek.some(m => m.isLocked === true || m.is_locked === true);
+  if (isManuallyLocked) return true;
+
   const deadline = getWeekClosingDeadline(matchesInWeek);
   if (!deadline) return false;
   return new Date().getTime() >= deadline.getTime();
@@ -62,7 +70,8 @@ export function isWeekVotingClosed(matchesInWeek: any[]): boolean {
 /**
  * Formatea el texto de la fecha límite para la interfaz.
  */
-export function formatDeadlineText(deadline: Date | null): string {
+export function formatDeadlineText(deadline: Date | null, isManuallyLocked?: boolean): string {
+  if (isManuallyLocked) return 'Bloqueada manualmente por el Administrador';
   if (!deadline) return 'Por definir';
   const dateStr = deadline.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
   return `${dateStr} a las 23:59 h`;

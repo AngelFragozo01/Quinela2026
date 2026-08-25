@@ -44,14 +44,16 @@ CREATE TABLE public.matches (
   match_date timestamp with time zone not null,
   week integer default 1,
   is_finished boolean default false,
+  is_locked boolean default false,
   home_score integer default 0,
   away_score integer default 0,
   winner_team_id text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Si la tabla ya existe, agregar la columna week:
+-- Si la tabla ya existe, agregar las columnas necesarias:
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS week integer DEFAULT 1;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS is_locked boolean DEFAULT false;
 
 -- RLS for matches
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;

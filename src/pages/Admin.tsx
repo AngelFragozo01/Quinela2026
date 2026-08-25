@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { TEAMS, getTeamIdFromName } from '../services/mockData';
-import { formatMatchDate } from '../services/dateUtils';
+import { formatMatchDate, getWeekClosingDeadline, formatDeadlineText } from '../services/dateUtils';
+import { Lock, Unlock, ShieldAlert } from 'lucide-react';
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'csv'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'weeks' | 'csv'>('weeks');
   
   // Para Crear Partido Manual
   const [homeTeam, setHomeTeam] = useState('KC');
@@ -20,6 +21,11 @@ export default function Admin() {
   const [scores, setScores] = useState<Record<string, { home: number; away: number }>>({});
   const [manageMessage, setManageMessage] = useState('');
 
+  // Para Control de Semanas
+  const [allMatches, setAllMatches] = useState<any[]>([]);
+  const [weeksLoading, setWeeksLoading] = useState(false);
+  const [weeksMessage, setWeeksMessage] = useState('');
+
   // Para Importar CSV
   const [csvText, setCsvText] = useState('');
   const [csvLoading, setCsvLoading] = useState(false);
@@ -29,6 +35,8 @@ export default function Admin() {
   useEffect(() => {
     if (activeTab === 'manage') {
       fetchActiveMatches();
+    } else if (activeTab === 'weeks') {
+      fetchAllMatchesForWeeks();
     }
   }, [activeTab]);
 
@@ -60,6 +68,76 @@ export default function Admin() {
     }
   };
 
+  const fetchAllMatchesForWeeks = async () => {
+    setWeeksLoading(true);
+    setWeeksMessage('');
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .select('*')
+        .order('week', { ascending: true })
+        .order('match_date', { ascending: true });
+
+      if (error) throw error;
+      if (data) {
+        setAllMatches(data);
+      }
+    } catch (err: any) {
+      setWeeksMessage(`❌ Error al cargar semanas: ${err.message}`);
+    } finally {
+      setWeeksLoading(false);
+    }
+  };
+
+  const handleToggleWeekLock = async (weekNum: number, lockStatus: boolean) => {
+    setWeeksLoading(true);
+    setWeeksMessage('');
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .update({ is_locked: lockStatus })
+        .eq('week', weekNum);
+
+      if (error) throw error;
+
+      setWeeksMessage(`✅ Semana ${weekNum} ${lockStatus ? '🔒 CERRADA y bloqueada' : '🟢 ABIERTA para votación'}.`);
+      await fetchAllMatchesForWeeks();
+    } catch (err: any) {
+      setWeeksMessage(`❌ Error al actualizar semana ${weekNum}: ${err.message}`);
+    } finally {
+      setWeeksLoading(false);
+    }
+  };
+
+  const handleBatchLockWeeks = async (lockStatus: boolean, exceptWeek1: boolean = false) => {
+    setWeeksLoading(true);
+    setWeeksMessage('');
+    try {
+      let query = supabase.from('matches').update({ is_locked: lockStatus });
+      if (exceptWeek1) {
+        query = query.neq('week', 1);
+        // Asegurar que Semana 1 quede abierta
+        await supabase.from('matches').update({ is_locked: false }).eq('week', 1);
+      } else {
+        query = query.gte('week', 1);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+
+      setWeeksMessage(
+        exceptWeek1 
+          ? '✅ Semana 1 ABIERTA y Semanas 2 a 18 CERRADAS / BLOQUEADAS exitosamente.' 
+          : `✅ Todas las semanas ${lockStatus ? '🔒 BLOQUEADAS' : '🟢 ABIERTAS'} exitosamente.`
+      );
+      await fetchAllMatchesForWeeks();
+    } catch (err: any) {
+      setWeeksMessage(`❌ Error al actualizar semanas: ${err.message}`);
+    } finally {
+      setWeeksLoading(false);
+    }
+  };
+
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateLoading(true);
@@ -72,6 +150,7 @@ export default function Admin() {
         match_date: new Date(matchDate).toISOString(),
         week: matchWeek,
         is_finished: false,
+        is_locked: false,
       });
 
       if (error) throw error;
@@ -178,12 +257,10 @@ export default function Admin() {
         continue;
       }
 
-      // Parsear fecha evitando desfase de zona horaria
       let isoDateString: string;
       try {
         const cleanDate = dateStr.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
-          // Asignar 18:00 UTC (tarde en América) para evitar que se reste un día en husos horarios occidentales
           isoDateString = `${cleanDate}T18:00:00.000Z`;
         } else {
           const parsed = new Date(cleanDate);
@@ -195,12 +272,16 @@ export default function Admin() {
         continue;
       }
 
+      // Por defecto, Semana 1 queda abierta (is_locked = false), y semanas futuras 2-18 cerradas (is_locked = true)
+      const isLockedByDefault = week > 1;
+
       matchesToInsert.push({
         week: week,
         match_date: isoDateString,
         away_team_id: awayId,
         home_team_id: homeId,
         is_finished: false,
+        is_locked: isLockedByDefault,
         home_score: 0,
         away_score: 0
       });
@@ -225,7 +306,7 @@ export default function Admin() {
       }
 
       setCsvProgress({ total: matchesToInsert.length, inserted: insertedCount, errors });
-      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase sin desfase de fecha!`);
+      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase! (Semana 1 abierta, semanas 2-18 cerradas).`);
     } catch (err: any) {
       setCsvMessage(`❌ Error al guardar en Supabase: ${err.message}`);
     } finally {
@@ -237,8 +318,11 @@ export default function Admin() {
     <option key={key} value={key}>{TEAMS[key].name}</option>
   ));
 
+  // Agrupar todos los partidos por semana para el panel de control
+  const availableWeeks = Array.from(new Set(allMatches.map(m => m.week || 1))).sort((a, b) => a - b);
+
   return (
-    <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '750px', margin: '0 auto' }}>
+    <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '850px', margin: '0 auto' }}>
       <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         ⚙️ Panel de Administración
       </h2>
@@ -246,15 +330,15 @@ export default function Admin() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto' }}>
         <button 
-          onClick={() => setActiveTab('create')}
+          onClick={() => setActiveTab('weeks')}
           style={{ 
-            background: 'none', color: activeTab === 'create' ? 'var(--text-main)' : 'var(--text-muted)', 
+            background: 'none', color: activeTab === 'weeks' ? 'var(--text-main)' : 'var(--text-muted)', 
             padding: '0.5rem 1rem', fontWeight: 'bold', border: 'none', cursor: 'pointer',
-            borderBottom: activeTab === 'create' ? '2px solid var(--primary-nfl)' : '2px solid transparent',
+            borderBottom: activeTab === 'weeks' ? '2px solid var(--primary-nfl)' : '2px solid transparent',
             whiteSpace: 'nowrap'
           }}
         >
-          Crear Partido
+          🔒 Control de Semanas (Abrir/Cerrar)
         </button>
         <button 
           onClick={() => setActiveTab('manage')}
@@ -266,6 +350,17 @@ export default function Admin() {
           }}
         >
           Gestionar Resultados ({activeMatches.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('create')}
+          style={{ 
+            background: 'none', color: activeTab === 'create' ? 'var(--text-main)' : 'var(--text-muted)', 
+            padding: '0.5rem 1rem', fontWeight: 'bold', border: 'none', cursor: 'pointer',
+            borderBottom: activeTab === 'create' ? '2px solid var(--primary-nfl)' : '2px solid transparent',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          Crear Partido
         </button>
         <button 
           onClick={() => setActiveTab('csv')}
@@ -280,6 +375,210 @@ export default function Admin() {
         </button>
       </div>
 
+      {/* PESTAÑA: CONTROL DE SEMANAS (ABRIR / CERRAR MANUALMENTE) */}
+      {activeTab === 'weeks' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '0.35rem' }}>
+              🔒 Control Manual de Votaciones por Semana
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              Abre o cierra la votación de cualquier jornada con un clic. Cuando una semana está <strong>Cerrada</strong>, los usuarios no podrán emitir ni modificar votos para esos partidos.
+            </p>
+          </div>
+
+          {weeksMessage && (
+            <div style={{ 
+              padding: '1rem', 
+              borderRadius: '8px', 
+              background: weeksMessage.includes('✅') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              border: weeksMessage.includes('✅') ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+              color: 'white'
+            }}>
+              {weeksMessage}
+            </div>
+          )}
+
+          {/* Acciones Rápidas en Lote */}
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <ShieldAlert size={18} color="var(--primary-nfl)" />
+              <span>Acciones Rápidas:</span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleBatchLockWeeks(true, true)}
+                disabled={weeksLoading}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  color: '#60a5fa',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🟢 Abrir Solo Semana 1 (Bloquear 2 a 18)
+              </button>
+              <button
+                onClick={() => handleBatchLockWeeks(true, false)}
+                disabled={weeksLoading}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  color: '#f87171',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🔒 Bloquear Todo
+              </button>
+              <button
+                onClick={() => handleBatchLockWeeks(false, false)}
+                disabled={weeksLoading}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  color: '#34d399',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🔓 Abrir Todo
+              </button>
+            </div>
+          </div>
+
+          {/* Listado de Semanas */}
+          {weeksLoading && allMatches.length === 0 ? (
+            <div>Cargando semanas...</div>
+          ) : availableWeeks.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '12px' }}>
+              No hay partidos cargados todavía. Sube el calendario desde la pestaña CSV.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+              {availableWeeks.map(w => {
+                const wMatches = allMatches.filter(m => (m.week || 1) === w);
+                const isLocked = wMatches.some(m => m.is_locked === true);
+                const deadline = getWeekClosingDeadline(wMatches);
+
+                return (
+                  <div
+                    key={w}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: isLocked ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>Semana {w}</span>
+                      <span style={{
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        background: isLocked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                        color: isLocked ? '#f87171' : '#34d399',
+                        border: isLocked ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                        {isLocked ? 'CERRADA' : 'ABIERTA'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                      {wMatches.length} partidos programados
+                    </div>
+                    {deadline && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
+                        Límite sugerido: {formatDeadlineText(deadline)}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                      {isLocked ? (
+                        <button
+                          onClick={() => handleToggleWeekLock(w, false)}
+                          disabled={weeksLoading}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem',
+                            borderRadius: '8px',
+                            background: 'var(--primary-nfl)',
+                            color: 'white',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <Unlock size={14} /> Abrir Votación
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleWeekLock(w, true)}
+                          disabled={weeksLoading}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem',
+                            borderRadius: '8px',
+                            background: 'rgba(239, 68, 68, 0.85)',
+                            color: 'white',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <Lock size={14} /> Cerrar y Bloquear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PESTAÑA: CREAR PARTIDO */}
       {activeTab === 'create' && (
         <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
           <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
@@ -352,6 +651,7 @@ export default function Admin() {
         </div>
       )}
 
+      {/* PESTAÑA: GESTIONAR RESULTADOS */}
       {activeTab === 'manage' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h3 style={{ color: 'var(--text-muted)' }}>Partidos Activos</h3>
@@ -438,6 +738,7 @@ export default function Admin() {
         </div>
       )}
 
+      {/* PESTAÑA: IMPORTAR CSV */}
       {activeTab === 'csv' && (
         <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
           <h3 style={{ marginBottom: '0.5rem' }}>📁 Cargar Calendario Completo (CSV)</h3>
