@@ -18,14 +18,58 @@ export function getMatchLocalDate(dateStr: string): Date | null {
 }
 
 /**
- * Calcula cuántos días faltan para el partido respecto al día de hoy (en días calendario).
- * Retorna:
- *  0 = Es hoy (Día del partido)
- *  1 = Es mañana (Falta 1 día)
- *  2 = Faltan 2 días
- *  3 = Faltan 3 días
- *  < 0 = Ya pasó
- *  > 3 = Falta más de 3 días
+ * Calcula la fecha y hora límite de votación para una semana dada.
+ * Regla: La votación se cierra el jueves anterior al inicio de los partidos de esa semana a las 23:59:59.
+ * Por ejemplo: Si los partidos de la Semana 1 empiezan el miércoles 9 de septiembre,
+ * el jueves anterior es el jueves 3 de septiembre a las 23:59:59.
+ */
+export function getWeekClosingDeadline(matchesInWeek: any[]): Date | null {
+  if (!matchesInWeek || matchesInWeek.length === 0) return null;
+
+  let earliestDate: Date | null = null;
+  for (const m of matchesInWeek) {
+    const dateStr = m.date || m.match_date;
+    const d = getMatchLocalDate(dateStr);
+    if (d) {
+      if (!earliestDate || d.getTime() < earliestDate.getTime()) {
+        earliestDate = d;
+      }
+    }
+  }
+
+  if (!earliestDate) return null;
+
+  // Retroceder hasta encontrar el jueves previo al inicio de la jornada
+  const deadline = new Date(earliestDate.getTime());
+  deadline.setDate(deadline.getDate() - 1);
+  while (deadline.getDay() !== 4) { // 4 = Jueves
+    deadline.setDate(deadline.getDate() - 1);
+  }
+
+  deadline.setHours(23, 59, 59, 999);
+  return deadline;
+}
+
+/**
+ * Determina si la votación para una semana completa ya está cerrada.
+ */
+export function isWeekVotingClosed(matchesInWeek: any[]): boolean {
+  const deadline = getWeekClosingDeadline(matchesInWeek);
+  if (!deadline) return false;
+  return new Date().getTime() >= deadline.getTime();
+}
+
+/**
+ * Formatea el texto de la fecha límite para la interfaz.
+ */
+export function formatDeadlineText(deadline: Date | null): string {
+  if (!deadline) return 'Por definir';
+  const dateStr = deadline.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  return `${dateStr} a las 23:59 h`;
+}
+
+/**
+ * Calcula cuántos días faltan para una fecha límite o partido.
  */
 export function getDaysUntilMatch(dateStr: string): number {
   const matchDate = getMatchLocalDate(dateStr);
@@ -36,23 +80,6 @@ export function getDaysUntilMatch(dateStr: string): number {
 
   const diffTime = matchDate.getTime() - today.getTime();
   return Math.round(diffTime / (1000 * 60 * 60 * 24));
-}
-
-/**
- * Determina si el partido está en la ventana de visualización de Predicciones (hasta 3 días antes y el día de hoy).
- */
-export function isMatchInVotingWindow(dateStr: string): boolean {
-  const days = getDaysUntilMatch(dateStr);
-  return days >= 0 && days <= 3;
-}
-
-/**
- * Determina si la votación para el partido está cerrada/bloqueada (el mismo día del juego o posterior).
- */
-export function isMatchVotingLocked(dateStr: string): boolean {
-  const days = getDaysUntilMatch(dateStr);
-  // Se bloquea el mismo día del juego (0) o si ya pasó (< 0)
-  return days <= 0;
 }
 
 /**

@@ -23,10 +23,11 @@ export default function MatchCard({
   const awayTeam = TEAMS[match.awayTeamId];
   
   const { formattedDate, formattedTime } = formatMatchDate(match.date);
-  const canClick = !match.isFinished && !isLocked;
+  const isReadOnly = !onSelectTeam;
+  const canClick = !match.isFinished && !isLocked && !isReadOnly;
 
   return (
-    <div className={`${styles.card} ${match.isFinished ? styles.finished : ''} ${isLocked ? styles.locked : ''}`}>
+    <div className={`${styles.card} ${match.isFinished ? styles.finished : ''} ${isLocked || isReadOnly ? styles.locked : ''}`}>
       <div className={styles.header}>
         <span className={styles.date}>
           {formattedDate} {formattedTime !== 'TBD' && formattedTime ? `• ${formattedTime}` : ''}
@@ -48,6 +49,17 @@ export default function MatchCard({
             gap: '0.25rem'
           }}>
             🔒 {lockReason || (selectedTeamId ? 'CERRADO' : 'SIN VOTAR')}
+          </span>
+        ) : isReadOnly ? (
+          <span style={{ 
+            background: 'rgba(255, 255, 255, 0.06)', 
+            color: 'var(--text-muted)', 
+            padding: '0.2rem 0.5rem', 
+            borderRadius: '4px', 
+            fontSize: '0.75rem', 
+            fontWeight: 600
+          }}>
+            POR JUGAR
           </span>
         ) : daysRemaining !== undefined && daysRemaining > 0 ? (
           <span style={{
@@ -82,7 +94,7 @@ export default function MatchCard({
           className={`${styles.team} ${selectedTeamId === awayTeam?.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === awayTeam?.id ? styles.winner : ''}`}
           onClick={() => canClick && onSelectTeam && onSelectTeam(awayTeam.id)}
           style={{ '--team-color': awayTeam?.color } as React.CSSProperties}
-          title={isLocked ? (selectedTeamId === awayTeam?.id ? 'Tu pronóstico' : 'Votación cerrada') : canClick ? `Votar por ${awayTeam?.name}` : ''}
+          title={isReadOnly ? awayTeam?.name : isLocked ? (selectedTeamId === awayTeam?.id ? 'Tu pronóstico' : 'Votación cerrada') : canClick ? `Votar por ${awayTeam?.name}` : ''}
         >
           <img src={awayTeam?.logo} alt={awayTeam?.name} className={styles.logo} />
           <span className={styles.name}>{awayTeam?.name}</span>
@@ -96,7 +108,7 @@ export default function MatchCard({
           className={`${styles.team} ${selectedTeamId === homeTeam?.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === homeTeam?.id ? styles.winner : ''}`}
           onClick={() => canClick && onSelectTeam && onSelectTeam(homeTeam.id)}
           style={{ '--team-color': homeTeam?.color } as React.CSSProperties}
-          title={isLocked ? (selectedTeamId === homeTeam?.id ? 'Tu pronóstico' : 'Votación cerrada') : canClick ? `Votar por ${homeTeam?.name}` : ''}
+          title={isReadOnly ? homeTeam?.name : isLocked ? (selectedTeamId === homeTeam?.id ? 'Tu pronóstico' : 'Votación cerrada') : canClick ? `Votar por ${homeTeam?.name}` : ''}
         >
           <img src={homeTeam?.logo} alt={homeTeam?.name} className={styles.logo} />
           <span className={styles.name}>{homeTeam?.name}</span>

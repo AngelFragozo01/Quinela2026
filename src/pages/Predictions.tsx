@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { TEAMS } from '../services/mockData';
-import { isMatchInVotingWindow, isMatchVotingLocked, getDaysUntilMatch } from '../services/dateUtils';
-import { AlertTriangle, Lock, CheckCircle2, Calendar, Clock } from 'lucide-react';
+import { 
+  getWeekClosingDeadline, 
+  isWeekVotingClosed, 
+  formatDeadlineText 
+} from '../services/dateUtils';
+import { AlertTriangle, Lock, CheckCircle2, Clock } from 'lucide-react';
 
 interface ConfirmModalData {
   match: any;
@@ -16,10 +19,10 @@ export default function Predictions() {
   const [predictions, setPredictions] = useState<Record<string, string>>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [confirmModal, setConfirmModal] = useState<ConfirmModalData | null>(null);
   const [saving, setSaving] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
-  const [viewAll, setViewAll] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -49,6 +52,7 @@ export default function Predictions() {
       .from('matches')
       .select('*')
       .eq('is_finished', false)
+      .order('week', { ascending: true })
       .order('match_date', { ascending: true });
       
     if (matchesData) {
@@ -64,13 +68,28 @@ export default function Predictions() {
         winnerTeamId: m.winner_team_id
       }));
       setMatches(formattedMatches);
+
+      // Determinar la semana activa por defecto
+      const availableWeeks = Array.from(new Set(formattedMatches.map(m => m.week))).sort((a, b) => a - b);
+      if (availableWeeks.length > 0) {
+        // Buscar la primera semana cuya votación aún no haya cerrado
+        const openWeek = availableWeeks.find(w => {
+          const weekMatches = formattedMatches.filter(m => m.week === w);
+          return !isWeekVotingClosed(weekMatches);
+        });
+        setSelectedWeek(openWeek || availableWeeks[0]);
+      }
     }
     setLoading(false);
   };
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
-    // Si la votación está cerrada (día de juego o fecha pasada), no permitir clic
-    if (isMatchVotingLocked(match.date)) return;
+    // Verificar si la semana ya cerró
+    const weekMatches = matches.filter(m => m.week === match.week);
+    if (isWeekVotingClosed(weekMatches)) {
+      alert("⚠️ La votación para esta semana ya está cerrada.");
+      return;
+    }
 
     // Si ya tiene el mismo equipo seleccionado, no hacer nada
     if (predictions[match.id] === teamId) return;
@@ -83,9 +102,9 @@ export default function Predictions() {
     if (!confirmModal || !userId) return;
     const { match, teamId } = confirmModal;
 
-    // Verificación de seguridad adicional en cliente
-    if (isMatchVotingLocked(match.date)) {
-      alert("⚠️ La votación para este partido ya cerró porque hoy es el día del juego.");
+    const weekMatches = matches.filter(m => m.week === match.week);
+    if (isWeekVotingClosed(weekMatches)) {
+      alert("⚠️ La votación para esta semana cerró el jueves anterior a la jornada.");
       setConfirmModal(null);
       return;
     }
@@ -106,7 +125,7 @@ export default function Predictions() {
       setConfirmModal(null);
 
       const teamName = TEAMS[teamId]?.name || 'Equipo';
-      setSuccessToast(`✅ ¡Pronóstico guardado para ${teamName}! Se bloqueará el día del juego.`);
+      setSuccessToast(`✅ ¡Pronóstico guardado para ${teamName}!`);
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err: any) {
       console.error("Error guardando predicción:", err);
@@ -116,20 +135,17 @@ export default function Predictions() {
     }
   };
 
-  const todayFormatted = new Date().toLocaleDateString('es-ES', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-
   if (loading) {
     return <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>Cargando jornada de predicciones...</div>;
   }
 
-  // Partidos en ventana activa de votación (hasta 3 días antes y el día de hoy)
-  const windowMatches = matches.filter(m => isMatchInVotingWindow(m.date));
-  const displayMatches = viewAll ? matches : windowMatches;
+  // Lista de semanas disponibles
+  const availableWeeks = Array.from(new Set(matches.map(m => m.week))).sort((a, b) => a - b);
+  const currentWeekMatches = matches.filter(m => m.week === selectedWeek);
+
+  // Calcular la fecha límite de la semana seleccionada
+  const weekDeadline = getWeekClosingDeadline(currentWeekMatches);
+  const isCurrentWeekClosed = isWeekVotingClosed(currentWeekMatches);
 
   return (
     <div style={{ animation: 'slideUp 0.4s ease' }}>
@@ -158,125 +174,127 @@ export default function Predictions() {
         </div>
       )}
 
-      {/* Cabecera de la página */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start', 
-        flexWrap: 'wrap', 
-        gap: '1rem',
-        marginBottom: '1.5rem' 
-      }}>
-        <div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🏈 Quiniela Activa (Ventana de 3 Días)
-          </h2>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem', textTransform: 'capitalize' }}>
-            Hoy: {todayFormatted}
-          </p>
-        </div>
-
-        {/* Toggle para ver ventana activa o todos */}
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button
-            onClick={() => setViewAll(false)}
-            style={{
-              padding: '0.4rem 0.85rem',
-              borderRadius: '20px',
-              border: !viewAll ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
-              background: !viewAll ? 'var(--primary-nfl)' : 'var(--bg-card)',
-              color: !viewAll ? 'white' : 'var(--text-muted)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            Próximos 3 Días ({windowMatches.length})
-          </button>
-          <button
-            onClick={() => setViewAll(true)}
-            style={{
-              padding: '0.4rem 0.85rem',
-              borderRadius: '20px',
-              border: viewAll ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
-              background: viewAll ? 'var(--primary-nfl)' : 'var(--bg-card)',
-              color: viewAll ? 'white' : 'var(--text-muted)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            Todos los Pendientes ({matches.length})
-          </button>
-        </div>
+      {/* Cabecera */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          🏈 Quiniela Semanal
+        </h2>
+        <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
+          Haz tus pronósticos por semana. Todas las votaciones cierran el <strong>jueves anterior</strong> a la jornada.
+        </p>
       </div>
 
-      {/* Banner de regla antifraude */}
+      {/* Selector de Semanas */}
+      {availableWeeks.length > 0 && (
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.5rem', 
+          overflowX: 'auto', 
+          paddingBottom: '1rem', 
+          marginBottom: '1.5rem',
+          scrollbarWidth: 'thin'
+        }}>
+          {availableWeeks.map(w => {
+            const wMatches = matches.filter(m => m.week === w);
+            const isClosed = isWeekVotingClosed(wMatches);
+
+            return (
+              <button
+                key={w}
+                onClick={() => setSelectedWeek(w)}
+                style={{
+                  padding: '0.5rem 1.15rem',
+                  borderRadius: '20px',
+                  border: selectedWeek === w ? '1px solid var(--primary-nfl)' : '1px solid var(--border-color)',
+                  background: selectedWeek === w ? 'var(--primary-nfl)' : 'var(--bg-card)',
+                  color: selectedWeek === w ? 'white' : 'var(--text-muted)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                {isClosed && <Lock size={12} />}
+                <span>Semana {w}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Banner de Estado de la Semana */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.4) 100%)',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        borderRadius: '10px',
-        padding: '0.85rem 1.25rem',
-        marginBottom: '1.5rem',
+        background: isCurrentWeekClosed 
+          ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(15, 23, 42, 0.5) 100%)'
+          : 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.5) 100%)',
+        border: isCurrentWeekClosed ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+        borderRadius: '12px',
+        padding: '1rem 1.25rem',
+        marginBottom: '2rem',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.75rem',
-        fontSize: '0.88rem',
-        color: '#bfdbfe'
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem'
       }}>
-        <Clock size={20} color="#60a5fa" style={{ flexShrink: 0 }} />
-        <span>
-          <strong>Regla de Votación:</strong> Los partidos se habilitan <strong>3 días antes</strong>. La votación se <strong>cierra automáticamente el mismo día del juego</strong>. ¡Asegura tu pronóstico con tiempo!
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div style={{
+            background: isCurrentWeekClosed ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+            padding: '0.6rem',
+            borderRadius: '10px',
+            color: isCurrentWeekClosed ? '#f87171' : '#34d399',
+            display: 'flex'
+          }}>
+            {isCurrentWeekClosed ? <Lock size={24} /> : <Clock size={24} />}
+          </div>
+          <div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white' }}>
+              {isCurrentWeekClosed 
+                ? `🔒 Votación Cerrada • Semana ${selectedWeek}`
+                : `🟢 Votación Abierta • Semana ${selectedWeek}`}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: isCurrentWeekClosed ? '#fca5a5' : '#a7f3d0', marginTop: '0.2rem' }}>
+              {isCurrentWeekClosed
+                ? `El plazo límite venció el ${formatDeadlineText(weekDeadline)}.`
+                : `Cierre de votación: ${formatDeadlineText(weekDeadline)}.`}
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          fontSize: '0.82rem',
+          color: 'var(--text-muted)',
+          background: 'rgba(0,0,0,0.25)',
+          padding: '0.4rem 0.8rem',
+          borderRadius: '8px',
+          fontWeight: 600
+        }}>
+          {currentWeekMatches.length} partidos en esta jornada
+        </div>
       </div>
 
-      {/* Listado de partidos */}
-      {displayMatches.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '3rem 1.5rem', 
-          background: 'var(--bg-card)', 
-          borderRadius: '12px',
-          border: '1px solid var(--border-color)'
-        }}>
-          <Calendar size={48} style={{ opacity: 0.4, margin: '0 auto 1rem' }} />
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos en los próximos 3 días</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', maxWidth: '500px', margin: '0 auto 1.5rem' }}>
-            Los partidos se abrirán automáticamente para votar cuando falten 3 días para su fecha de juego.
-          </p>
-          <Link 
-            to="/upcoming"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              background: 'var(--primary-nfl)',
-              color: 'white',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: 'bold',
-              fontSize: '0.95rem'
-            }}
-          >
-            📅 Ver Calendario Completo en Próximos
-          </Link>
+      {/* Partidos de la Semana */}
+      {currentWeekMatches.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos pendientes en la Semana {selectedWeek}</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Selecciona otra semana en la parte superior.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-          {displayMatches.map(match => {
+          {currentWeekMatches.map(match => {
             const userChoice = predictions[match.id];
-            const isLocked = isMatchVotingLocked(match.date);
-            const daysRemaining = getDaysUntilMatch(match.date);
 
             return (
               <MatchCard 
                 key={match.id} 
                 match={match} 
                 selectedTeamId={userChoice}
-                isLocked={isLocked}
-                daysRemaining={daysRemaining}
-                lockReason={isLocked ? (userChoice ? 'VOTO CERRADO' : 'TIEMPO EXPIRADO') : undefined}
+                isLocked={isCurrentWeekClosed}
+                lockReason={isCurrentWeekClosed ? (userChoice ? 'VOTO CERRADO' : 'TIEMPO EXPIRADO') : undefined}
                 onSelectTeam={(teamId) => handleSelectTeamClick(match, teamId)}
               />
             );
@@ -351,22 +369,22 @@ export default function Predictions() {
               );
             })()}
 
-            {/* Aviso de cierre automático el día del juego */}
+            {/* Aviso de cierre el jueves previo */}
             <div style={{
-              background: 'rgba(234, 179, 8, 0.1)',
-              border: '1px solid rgba(234, 179, 8, 0.3)',
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
               borderRadius: '8px',
               padding: '0.85rem',
               marginBottom: '1.5rem',
               fontSize: '0.85rem',
-              color: '#fef08a',
+              color: '#bfdbfe',
               display: 'flex',
               gap: '0.5rem',
               alignItems: 'flex-start'
             }}>
-              <Lock size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#eab308' }} />
+              <Lock size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#60a5fa' }} />
               <span>
-                <strong>Regla de Cierre:</strong> Podrás ajustar tu elección durante la ventana activa. <strong>El mismo día del partido se bloqueará automáticamente</strong> para evitar cambios de último minuto.
+                <strong>Fecha límite:</strong> Esta semana se cerrará automáticamente el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
               </span>
             </div>
 
