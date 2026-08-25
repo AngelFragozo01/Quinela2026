@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
+import { getWeekLabel } from '../services/dateUtils';
 
 export default function Upcoming() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -27,7 +28,7 @@ export default function Upcoming() {
         homeTeamId: m.home_team_id,
         awayTeamId: m.away_team_id,
         date: m.match_date,
-        week: m.week || 1,
+        week: m.week ?? 1,
         isFinished: m.is_finished,
         homeScore: m.home_score,
         awayScore: m.away_score,
@@ -57,11 +58,11 @@ export default function Upcoming() {
           📅 Calendario de Partidos por Semana
         </h2>
         <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
-          Consulta el calendario oficial de toda la temporada regular organizado por semanas.
+          Consulta el calendario oficial de pretemporada y temporada regular organizado por semanas.
         </p>
       </div>
 
-      {/* Selector de Semanas exclusivo (sin 'Todas las Semanas') */}
+      {/* Selector de Semanas exclusivo */}
       {availableWeeks.length > 0 && (
         <div style={{ 
           display: 'flex', 
@@ -88,7 +89,7 @@ export default function Upcoming() {
                 transition: 'all 0.2s ease'
               }}
             >
-              Semana {w}
+              {getWeekLabel(w)}
             </button>
           ))}
         </div>
@@ -117,7 +118,7 @@ export default function Upcoming() {
               fontWeight: 800, 
               fontSize: '0.95rem' 
             }}>
-              Semana {selectedWeek}
+              {getWeekLabel(selectedWeek)}
             </span>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
               {currentWeekMatches.length} partidos programados

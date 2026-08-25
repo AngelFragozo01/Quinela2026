@@ -5,7 +5,8 @@ import { TEAMS } from '../services/mockData';
 import { 
   getWeekClosingDeadline, 
   isWeekVotingClosed, 
-  formatDeadlineText 
+  formatDeadlineText,
+  getWeekLabel 
 } from '../services/dateUtils';
 import { AlertTriangle, Lock, CheckCircle2, Clock } from 'lucide-react';
 
@@ -61,7 +62,7 @@ export default function Predictions() {
         homeTeamId: m.home_team_id,
         awayTeamId: m.away_team_id,
         date: m.match_date,
-        week: m.week || 1,
+        week: m.week ?? 1,
         isFinished: m.is_finished,
         isLocked: m.is_locked,
         homeScore: m.home_score,
@@ -77,24 +78,20 @@ export default function Predictions() {
           const weekMatches = formattedMatches.filter(m => m.week === w);
           return !isWeekVotingClosed(weekMatches);
         });
-        setSelectedWeek(openWeek || availableWeeks[0]);
+        setSelectedWeek(openWeek ?? availableWeeks[0]);
       }
     }
     setLoading(false);
   };
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
-    // Verificar si la semana está cerrada (manual o por fecha límite)
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta semana se encuentra cerrada.");
+      alert("⚠️ La votación para esta jornada se encuentra cerrada.");
       return;
     }
 
-    // Si ya tiene el mismo equipo seleccionado, no hacer nada
     if (predictions[match.id] === teamId) return;
-
-    // Abrir modal de confirmación
     setConfirmModal({ match, teamId });
   };
 
@@ -104,7 +101,7 @@ export default function Predictions() {
 
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta semana ya ha sido cerrada.");
+      alert("⚠️ La votación para esta jornada ya ha sido cerrada.");
       setConfirmModal(null);
       return;
     }
@@ -220,7 +217,7 @@ export default function Predictions() {
                 }}
               >
                 {isClosed && <Lock size={12} />}
-                <span>Semana {w}</span>
+                <span>{getWeekLabel(w)}</span>
               </button>
             );
           })}
@@ -255,8 +252,8 @@ export default function Predictions() {
           <div>
             <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white' }}>
               {isCurrentWeekClosed 
-                ? `🔒 Votación Cerrada • Semana ${selectedWeek}`
-                : `🟢 Votación Abierta • Semana ${selectedWeek}`}
+                ? `🔒 Votación Cerrada • ${getWeekLabel(selectedWeek)}`
+                : `🟢 Votación Abierta • ${getWeekLabel(selectedWeek)}`}
             </div>
             <div style={{ fontSize: '0.85rem', color: isCurrentWeekClosed ? '#fca5a5' : '#a7f3d0', marginTop: '0.2rem' }}>
               {isCurrentWeekClosed
@@ -281,7 +278,7 @@ export default function Predictions() {
       {/* Partidos de la Semana */}
       {currentWeekMatches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos pendientes en la Semana {selectedWeek}</h3>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No hay partidos pendientes en {getWeekLabel(selectedWeek)}</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Selecciona otra semana en la parte superior.</p>
         </div>
       ) : (
@@ -363,7 +360,7 @@ export default function Predictions() {
                       {chosenTeam?.name}
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      vs {rivalTeam?.name} • Semana {confirmModal.match.week || 1}
+                      vs {rivalTeam?.name} • {getWeekLabel(confirmModal.match.week ?? 1)}
                     </div>
                   </div>
                 </div>
@@ -385,7 +382,7 @@ export default function Predictions() {
             }}>
               <Lock size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#60a5fa' }} />
               <span>
-                <strong>Fecha límite:</strong> Esta semana se cerrará el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
+                <strong>Fecha límite:</strong> Esta jornada se cerrará el <strong>{formatDeadlineText(weekDeadline)}</strong>. Podrás ajustar tu pronóstico hasta ese momento.
               </span>
             </div>
 

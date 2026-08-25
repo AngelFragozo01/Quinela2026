@@ -3,6 +3,19 @@
  */
 
 /**
+ * Retorna la etiqueta formateada para una semana (ej. "Pretemporada 3", "Semana 1").
+ */
+export function getWeekLabel(week: number): string {
+  if (week < 0) {
+    return `Pretemporada ${Math.abs(week)}`;
+  }
+  if (week === 0) {
+    return 'Pretemporada';
+  }
+  return `Semana ${week}`;
+}
+
+/**
  * Obtiene el objeto Date local a medianoche correspondiente a la fecha del partido.
  */
 export function getMatchLocalDate(dateStr: string): Date | null {

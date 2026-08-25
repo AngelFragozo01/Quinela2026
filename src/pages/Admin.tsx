@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { TEAMS, getTeamIdFromName } from '../services/mockData';
-import { formatMatchDate, getWeekClosingDeadline, formatDeadlineText } from '../services/dateUtils';
+import { formatMatchDate, getWeekClosingDeadline, formatDeadlineText, getWeekLabel } from '../services/dateUtils';
 import { Lock, Unlock, ShieldAlert } from 'lucide-react';
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'weeks' | 'csv'>('weeks');
+  const [activeTab, setActiveTab] = useState<'create' | 'weeks' | 'manage' | 'csv'>('create');
   
   // Para Crear Partido Manual
   const [homeTeam, setHomeTeam] = useState('KC');
   const [awayTeam, setAwayTeam] = useState('SF');
   const [matchDate, setMatchDate] = useState('');
-  const [matchWeek, setMatchWeek] = useState(1);
+  const [matchWeek, setMatchWeek] = useState(-3); // Pretemporada 3 por defecto
   const [createLoading, setCreateLoading] = useState(false);
   const [createMessage, setCreateMessage] = useState('');
 
@@ -100,39 +100,32 @@ export default function Admin() {
 
       if (error) throw error;
 
-      setWeeksMessage(`✅ Semana ${weekNum} ${lockStatus ? '🔒 CERRADA y bloqueada' : '🟢 ABIERTA para votación'}.`);
+      setWeeksMessage(`✅ ${getWeekLabel(weekNum)} ${lockStatus ? '🔒 CERRADA y bloqueada' : '🟢 ABIERTA para votación'}.`);
       await fetchAllMatchesForWeeks();
     } catch (err: any) {
-      setWeeksMessage(`❌ Error al actualizar semana ${weekNum}: ${err.message}`);
+      setWeeksMessage(`❌ Error al actualizar ${getWeekLabel(weekNum)}: ${err.message}`);
     } finally {
       setWeeksLoading(false);
     }
   };
 
-  const handleBatchLockWeeks = async (lockStatus: boolean, exceptWeek1: boolean = false) => {
+  const handleBatchLockWeeks = async (lockStatus: boolean, openWeekNum?: number) => {
     setWeeksLoading(true);
     setWeeksMessage('');
     try {
-      let query = supabase.from('matches').update({ is_locked: lockStatus });
-      if (exceptWeek1) {
-        query = query.neq('week', 1);
-        // Asegurar que Semana 1 quede abierta
-        await supabase.from('matches').update({ is_locked: false }).eq('week', 1);
+      if (openWeekNum !== undefined) {
+        // Bloquear todas y abrir solo la semana seleccionada
+        await supabase.from('matches').update({ is_locked: true }).neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('matches').update({ is_locked: false }).eq('week', openWeekNum);
+        setWeeksMessage(`✅ ${getWeekLabel(openWeekNum)} ABIERTA y las demás CERRADAS / BLOQUEADAS.`);
       } else {
-        query = query.gte('week', 1);
+        await supabase.from('matches').update({ is_locked: lockStatus }).neq('id', '00000000-0000-0000-0000-000000000000');
+        setWeeksMessage(`✅ Todas las jornadas ${lockStatus ? '🔒 BLOQUEADAS' : '🟢 ABIERTAS'} exitosamente.`);
       }
 
-      const { error } = await query;
-      if (error) throw error;
-
-      setWeeksMessage(
-        exceptWeek1 
-          ? '✅ Semana 1 ABIERTA y Semanas 2 a 18 CERRADAS / BLOQUEADAS exitosamente.' 
-          : `✅ Todas las semanas ${lockStatus ? '🔒 BLOQUEADAS' : '🟢 ABIERTAS'} exitosamente.`
-      );
       await fetchAllMatchesForWeeks();
     } catch (err: any) {
-      setWeeksMessage(`❌ Error al actualizar semanas: ${err.message}`);
+      setWeeksMessage(`❌ Error al actualizar jornadas: ${err.message}`);
     } finally {
       setWeeksLoading(false);
     }
@@ -154,7 +147,7 @@ export default function Admin() {
       });
 
       if (error) throw error;
-      setCreateMessage('✅ Partido creado exitosamente.');
+      setCreateMessage(`✅ Partido de ${getWeekLabel(matchWeek)} creado exitosamente.`);
       setMatchDate('');
     } catch (err: any) {
       setCreateMessage(`❌ Error al crear partido: ${err.message}`);
@@ -244,7 +237,16 @@ export default function Admin() {
       }
 
       const [weekStr, dateStr, awayTeamRaw, homeTeamRaw] = parts;
-      const week = parseInt(weekStr) || 1;
+      let week = parseInt(weekStr) || 1;
+      // Soporte para "Pretemporada 3" o "P3" en CSV
+      if (weekStr.toLowerCase().includes('pretemporada 3') || weekStr.toLowerCase().includes('p3')) {
+        week = -3;
+      } else if (weekStr.toLowerCase().includes('pretemporada 2') || weekStr.toLowerCase().includes('p2')) {
+        week = -2;
+      } else if (weekStr.toLowerCase().includes('pretemporada 1') || weekStr.toLowerCase().includes('p1')) {
+        week = -1;
+      }
+
       const awayId = getTeamIdFromName(awayTeamRaw);
       const homeId = getTeamIdFromName(homeTeamRaw);
 
@@ -272,8 +274,7 @@ export default function Admin() {
         continue;
       }
 
-      // Por defecto, Semana 1 queda abierta (is_locked = false), y semanas futuras 2-18 cerradas (is_locked = true)
-      const isLockedByDefault = week > 1;
+      const isLockedByDefault = week !== 1 && week !== -3;
 
       matchesToInsert.push({
         week: week,
@@ -306,7 +307,7 @@ export default function Admin() {
       }
 
       setCsvProgress({ total: matchesToInsert.length, inserted: insertedCount, errors });
-      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase! (Semana 1 abierta, semanas 2-18 cerradas).`);
+      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase!`);
     } catch (err: any) {
       setCsvMessage(`❌ Error al guardar en Supabase: ${err.message}`);
     } finally {
@@ -318,8 +319,7 @@ export default function Admin() {
     <option key={key} value={key}>{TEAMS[key].name}</option>
   ));
 
-  // Agrupar todos los partidos por semana para el panel de control
-  const availableWeeks = Array.from(new Set(allMatches.map(m => m.week || 1))).sort((a, b) => a - b);
+  const availableWeeks = Array.from(new Set(allMatches.map(m => m.week ?? 1))).sort((a, b) => a - b);
 
   return (
     <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '850px', margin: '0 auto' }}>
@@ -329,6 +329,17 @@ export default function Admin() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto' }}>
+        <button 
+          onClick={() => setActiveTab('create')}
+          style={{ 
+            background: 'none', color: activeTab === 'create' ? 'var(--text-main)' : 'var(--text-muted)', 
+            padding: '0.5rem 1rem', fontWeight: 'bold', border: 'none', cursor: 'pointer',
+            borderBottom: activeTab === 'create' ? '2px solid var(--primary-nfl)' : '2px solid transparent',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          ➕ Crear Partido Manual
+        </button>
         <button 
           onClick={() => setActiveTab('weeks')}
           style={{ 
@@ -352,17 +363,6 @@ export default function Admin() {
           Gestionar Resultados ({activeMatches.length})
         </button>
         <button 
-          onClick={() => setActiveTab('create')}
-          style={{ 
-            background: 'none', color: activeTab === 'create' ? 'var(--text-main)' : 'var(--text-muted)', 
-            padding: '0.5rem 1rem', fontWeight: 'bold', border: 'none', cursor: 'pointer',
-            borderBottom: activeTab === 'create' ? '2px solid var(--primary-nfl)' : '2px solid transparent',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          Crear Partido
-        </button>
-        <button 
           onClick={() => setActiveTab('csv')}
           style={{ 
             background: 'none', color: activeTab === 'csv' ? 'var(--text-main)' : 'var(--text-muted)', 
@@ -374,6 +374,86 @@ export default function Admin() {
           📁 Cargar CSV Temporada
         </button>
       </div>
+
+      {/* PESTAÑA: CREAR PARTIDO */}
+      {activeTab === 'create' && (
+        <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+          <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+            Añadir Nuevo Partido Manual (Pretemporada o Temporada Regular)
+          </h3>
+
+          {createMessage && <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', color: 'white' }}>{createMessage}</div>}
+
+          <form onSubmit={handleCreateMatch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Local</label>
+                <select 
+                  value={homeTeam} 
+                  onChange={e => setHomeTeam(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
+                >
+                  {teamOptions}
+                </select>
+              </div>
+              <div style={{ flex: '1 1 200px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Visitante</label>
+                <select 
+                  value={awayTeam} 
+                  onChange={e => setAwayTeam(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
+                >
+                  {teamOptions}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 180px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Semana / Jornada</label>
+                <select
+                  value={matchWeek}
+                  onChange={e => setMatchWeek(Number(e.target.value))}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
+                >
+                  <optgroup label="🔥 Pretemporada">
+                    <option value={-3}>Pretemporada 3</option>
+                    <option value={-2}>Pretemporada 2</option>
+                    <option value={-1}>Pretemporada 1</option>
+                  </optgroup>
+                  <optgroup label="🏈 Temporada Regular">
+                    {Array.from({ length: 18 }, (_, i) => i + 1).map(w => (
+                      <option key={w} value={w}>Semana {w}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              <div style={{ flex: '2 1 240px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Fecha y Hora</label>
+                <input 
+                  type="datetime-local" 
+                  required
+                  value={matchDate}
+                  onChange={e => setMatchDate(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={createLoading}
+              style={{ 
+                marginTop: '1rem', padding: '1rem', background: 'var(--primary-nfl)', color: 'white', 
+                border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' 
+              }}
+            >
+              {createLoading ? 'Guardando...' : 'Añadir Partido'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* PESTAÑA: CONTROL DE SEMANAS (ABRIR / CERRAR MANUALMENTE) */}
       {activeTab === 'weeks' && (
@@ -417,7 +497,7 @@ export default function Admin() {
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <button
-                onClick={() => handleBatchLockWeeks(true, true)}
+                onClick={() => handleBatchLockWeeks(true, -3)}
                 disabled={weeksLoading}
                 style={{
                   padding: '0.5rem 1rem',
@@ -430,10 +510,26 @@ export default function Admin() {
                   cursor: 'pointer'
                 }}
               >
-                🟢 Abrir Solo Semana 1 (Bloquear 2 a 18)
+                🔥 Abrir Solo Pretemporada 3
               </button>
               <button
-                onClick={() => handleBatchLockWeeks(true, false)}
+                onClick={() => handleBatchLockWeeks(true, 1)}
+                disabled={weeksLoading}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  color: '#60a5fa',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🟢 Abrir Solo Semana 1
+              </button>
+              <button
+                onClick={() => handleBatchLockWeeks(true)}
                 disabled={weeksLoading}
                 style={{
                   padding: '0.5rem 1rem',
@@ -449,7 +545,7 @@ export default function Admin() {
                 🔒 Bloquear Todo
               </button>
               <button
-                onClick={() => handleBatchLockWeeks(false, false)}
+                onClick={() => handleBatchLockWeeks(false)}
                 disabled={weeksLoading}
                 style={{
                   padding: '0.5rem 1rem',
@@ -472,12 +568,12 @@ export default function Admin() {
             <div>Cargando semanas...</div>
           ) : availableWeeks.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '12px' }}>
-              No hay partidos cargados todavía. Sube el calendario desde la pestaña CSV.
+              No hay partidos cargados todavía. Crea uno en "Crear Partido Manual" o sube el CSV.
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
               {availableWeeks.map(w => {
-                const wMatches = allMatches.filter(m => (m.week || 1) === w);
+                const wMatches = allMatches.filter(m => (m.week ?? 1) === w);
                 const isLocked = wMatches.some(m => m.is_locked === true);
                 const deadline = getWeekClosingDeadline(wMatches);
 
@@ -496,7 +592,7 @@ export default function Admin() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>Semana {w}</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{getWeekLabel(w)}</span>
                       <span style={{
                         padding: '0.2rem 0.6rem',
                         borderRadius: '20px',
@@ -578,79 +674,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* PESTAÑA: CREAR PARTIDO */}
-      {activeTab === 'create' && (
-        <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-            Añadir Nuevo Partido Manual
-          </h3>
-
-          {createMessage && <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', color: 'white' }}>{createMessage}</div>}
-
-          <form onSubmit={handleCreateMatch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 200px' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Local</label>
-                <select 
-                  value={homeTeam} 
-                  onChange={e => setHomeTeam(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
-                >
-                  {teamOptions}
-                </select>
-              </div>
-              <div style={{ flex: '1 1 200px' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Visitante</label>
-                <select 
-                  value={awayTeam} 
-                  onChange={e => setAwayTeam(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
-                >
-                  {teamOptions}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 120px' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Semana</label>
-                <select
-                  value={matchWeek}
-                  onChange={e => setMatchWeek(Number(e.target.value))}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
-                >
-                  {Array.from({ length: 18 }, (_, i) => i + 1).map(w => (
-                    <option key={w} value={w}>Semana {w}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ flex: '2 1 240px' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Fecha y Hora</label>
-                <input 
-                  type="datetime-local" 
-                  required
-                  value={matchDate}
-                  onChange={e => setMatchDate(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', outline: 'none' }}
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={createLoading}
-              style={{ 
-                marginTop: '1rem', padding: '1rem', background: 'var(--primary-nfl)', color: 'white', 
-                border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' 
-              }}
-            >
-              {createLoading ? 'Guardando...' : 'Añadir Partido'}
-            </button>
-          </form>
-        </div>
-      )}
-
       {/* PESTAÑA: GESTIONAR RESULTADOS */}
       {activeTab === 'manage' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -679,7 +702,7 @@ export default function Admin() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                     <span style={{ background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
-                      Semana {match.week || 1}
+                      {getWeekLabel(match.week ?? 1)}
                     </span>
                     <span style={{ textTransform: 'uppercase' }}>
                       {formattedDate} {formattedTime !== 'TBD' && formattedTime ? `• ${formattedTime}` : ''}
@@ -743,7 +766,7 @@ export default function Admin() {
         <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
           <h3 style={{ marginBottom: '0.5rem' }}>📁 Cargar Calendario Completo (CSV)</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-            Sube o pega el calendario de partidos en formato CSV (Semana, Fecha, Equipo Visitante, Equipo Local). El sistema mapeará automáticamente los nombres de los equipos y cargará toda la temporada en Supabase sin desfases de fecha.
+            Sube o pega el calendario de partidos en formato CSV. El sistema mapeará automáticamente los nombres de los equipos y cargará la temporada en Supabase.
           </p>
 
           {csvMessage && (

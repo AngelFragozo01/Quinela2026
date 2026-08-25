@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
+import { getWeekLabel } from '../services/dateUtils';
 
 export default function History() {
   const [finishedMatches, setFinishedMatches] = useState<any[]>([]);
@@ -45,7 +46,7 @@ export default function History() {
         homeTeamId: m.home_team_id,
         awayTeamId: m.away_team_id,
         date: m.match_date,
-        week: m.week || 1,
+        week: m.week ?? 1,
         isFinished: m.is_finished,
         homeScore: m.home_score,
         awayScore: m.away_score,
@@ -55,7 +56,7 @@ export default function History() {
 
       const weeks = Array.from(new Set(formatted.map(m => m.week))).sort((a, b) => b - a);
       if (weeks.length > 0) {
-        setSelectedWeek(weeks[0]); // Seleccionar la semana más reciente por defecto
+        setSelectedWeek(weeks[0]);
       }
     }
     setLoading(false);
@@ -150,7 +151,7 @@ export default function History() {
                 transition: 'all 0.2s ease'
               }}
             >
-              Semana {w} ({count})
+              {getWeekLabel(w)} ({count})
             </button>
           );
         })}
@@ -171,7 +172,7 @@ export default function History() {
       }}>
         <div>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Rendimiento {selectedWeek === 'all' ? 'Total' : `Semana ${selectedWeek}`}
+            Rendimiento {selectedWeek === 'all' ? 'Total' : getWeekLabel(selectedWeek)}
           </span>
           <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginTop: '0.2rem' }}>
             {totalHits} aciertos de {currentWeekMatches.length} partidos
@@ -215,7 +216,7 @@ export default function History() {
                   fontWeight: 800, 
                   fontSize: '0.9rem' 
                 }}>
-                  Semana {weekNum}
+                  {getWeekLabel(weekNum)}
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   {weekMatches.length} partidos finalizados
