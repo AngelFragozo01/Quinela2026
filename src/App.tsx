@@ -24,7 +24,7 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id);
+      if (session) fetchProfile(session.user.id, session.user);
       else setLoading(false);
     });
 
@@ -33,7 +33,7 @@ function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.id, session.user);
       } else {
         setProfile(null);
         setLoading(false);
@@ -43,14 +43,40 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, sessionUser?: any) => {
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
     
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+    } else if (sessionUser) {
+      // Fallback de seguridad: si el trigger no creó el perfil, se crea dinámicamente
+      const fallbackUsername = sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0] || 'Usuario';
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: sessionUser.email,
+          username: fallbackUsername,
+          role: 'user'
+        })
+        .select()
+        .single();
+
+      if (newProfile) {
+        setProfile(newProfile);
+      } else {
+        setProfile({
+          id: userId,
+          email: sessionUser.email || '',
+          username: fallbackUsername,
+          role: 'user'
+        });
+      }
+    }
     setLoading(false);
   };
 
