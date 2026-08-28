@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import styles from './Login.module.css';
 
+// Convierte cualquier nombre de usuario (incluso con espacios o acentos) en un email válido para Supabase
+function usernameToEmail(username: string): string {
+  const clean = username.trim().toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remover acentos
+    .replace(/[^a-z0-9]/g, "");     // remover caracteres especiales y espacios
+
+  return `${clean || 'user'}@quiniela.com`;
+}
+
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [userOrEmail, setUserOrEmail] = useState('');
@@ -19,28 +29,27 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        // INICIO DE SESIÓN
+        // --- INICIO DE SESIÓN ---
         const input = userOrEmail.trim();
         if (!input) {
-          throw new Error('Por favor ingresa tu nombre de usuario o correo.');
+          throw new Error('Por favor ingresa tu usuario o correo.');
         }
 
         let emailToUse = input;
 
-        // Si no incluye '@', tratamos la entrada como un nombre de usuario
+        // Si no ingresó un email completo con '@'
         if (!input.includes('@')) {
-          const cleanUser = input.toLowerCase();
-          // Consultar el perfil por username para obtener su email asociado
+          // Intentar buscar el perfil por nombre de usuario
           const { data: profile } = await supabase
             .from('profiles')
             .select('email')
-            .ilike('username', cleanUser)
+            .ilike('username', input)
             .maybeSingle();
 
           if (profile?.email) {
             emailToUse = profile.email;
           } else {
-            emailToUse = `${cleanUser}@gmail.com`;
+            emailToUse = usernameToEmail(input);
           }
         }
 
@@ -50,18 +59,17 @@ export default function Login() {
         });
 
         if (signInError) {
-          console.error('Error al iniciar sesión:', signInError);
-
+          console.error('Error signInWithPassword:', signInError);
           if (signInError.message.includes('Invalid login credentials')) {
             throw new Error('Usuario o contraseña incorrectos. Verifica tus datos.');
           }
           if (signInError.message.includes('Email not confirmed')) {
-            throw new Error('⚠️ Tu cuenta requiere confirmación en Supabase. Ve a Supabase -> Authentication -> Providers -> Email y desactiva "Confirm email".');
+            throw new Error('⚠️ Tu proyecto de Supabase tiene activa la confirmación de email. Ve a Supabase -> Authentication -> Providers -> Email y desactiva "Confirm email".');
           }
-          throw new Error(signInError.message);
+          throw new Error(`Error de inicio de sesión: ${signInError.message}`);
         }
       } else {
-        // REGISTRO DE USUARIO
+        // --- REGISTRO DE NUEVO USUARIO ---
         const cleanUsername = username.trim();
         if (cleanUsername.length < 3) {
           throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
@@ -71,7 +79,7 @@ export default function Login() {
           throw new Error('La contraseña debe tener al menos 4 caracteres.');
         }
 
-        // 1. Comprobar si el usuario ya existe en la tabla de perfiles
+        // 1. Verificar si el usuario ya existe en profiles
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('username')
@@ -79,13 +87,13 @@ export default function Login() {
           .maybeSingle();
 
         if (existingProfile) {
-          throw new Error(`El nombre de usuario "${cleanUsername}" ya está registrado. Por favor elige otro.`);
+          throw new Error(`El usuario "${cleanUsername}" ya existe. Elige otro nombre de usuario.`);
         }
 
-        // 2. Usar un correo sintético válido (@gmail.com) para Supabase Auth
-        const syntheticEmail = `${cleanUsername.toLowerCase()}@gmail.com`;
+        // 2. Generar un email sintético 100% válido
+        const syntheticEmail = usernameToEmail(cleanUsername);
 
-        // 3. Crear cuenta en Supabase Auth
+        // 3. Crear el usuario en Supabase Auth
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: syntheticEmail,
           password,
@@ -97,34 +105,17 @@ export default function Login() {
         });
 
         if (signUpError) {
-          console.error('Error al registrar usuario:', signUpError);
-
+          console.error('Error signUp:', signUpError);
           if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
-            throw new Error(`El usuario "${cleanUsername}" ya existe. Intenta iniciar sesión.`);
+            throw new Error(`El usuario "${cleanUsername}" ya está registrado. Intenta iniciar sesión.`);
           }
-          if (signUpError.message.includes('Database error saving new user')) {
-            throw new Error('Error en el trigger de la base de datos. Por favor ejecuta el script de corrección de base de datos en el SQL Editor de Supabase.');
+          if (signUpError.message.includes('Signups not allowed')) {
+            throw new Error('⚠️ El registro de nuevos usuarios está desactivado en tu proyecto de Supabase (Authentication -> Settings -> Allow new users to sign up).');
           }
-          throw new Error(signUpError.message);
+          throw new Error(`Error al registrar usuario: ${signUpError.message}`);
         }
 
-        // 4. Asegurar la creación del perfil en la tabla public.profiles si no existe
-        if (data?.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              email: syntheticEmail,
-              username: cleanUsername,
-              role: 'user'
-            }, { onConflict: 'id' });
-
-          if (profileError) {
-            console.warn('Advertencia al guardar perfil en profiles:', profileError);
-          }
-        }
-
-        // 5. Intentar auto iniciar sesión por si "Confirm Email" está activo en Supabase
+        // 4. Si el registro no inició sesión automáticamente (por ajuste de email confirmation en Supabase)
         if (data?.user && !data?.session) {
           const { error: autoSignInError } = await supabase.auth.signInWithPassword({
             email: syntheticEmail,
@@ -132,16 +123,16 @@ export default function Login() {
           });
 
           if (autoSignInError) {
-            setSuccessMessage('¡Cuenta creada! Recuerda desactivar "Confirm Email" en Supabase -> Authentication -> Providers -> Email para evitar pedir correos.');
+            setSuccessMessage('¡Cuenta creada con éxito! Si no te redirige, desactiva "Confirm Email" en tu panel de Supabase (Authentication -> Providers -> Email).');
             return;
           }
         }
 
-        setSuccessMessage('¡Cuenta creada con éxito! Ingresando...');
+        setSuccessMessage('¡Cuenta creada con éxito! Redirigiendo...');
       }
     } catch (err: any) {
-      console.error('Auth handler error:', err);
-      setError(err.message || 'Ocurrió un error en la autenticación.');
+      console.error('Auth Exception:', err);
+      setError(err.message || 'Ocurrió un error inesperado al autenticar.');
     } finally {
       setLoading(false);
     }
@@ -153,20 +144,21 @@ export default function Login() {
         <div className={styles.logo}>🏈 NFL Predictor</div>
         <h1 className={styles.title}>{isLogin ? 'Iniciar Sesión' : 'Registrarse'}</h1>
         <p className={styles.subtitle}>
-          {isLogin ? 'Ingresa tu usuario y contraseña para participar.' : 'Crea una cuenta rápido solo con tu usuario y contraseña.'}
+          {isLogin ? 'Ingresa con tu usuario y contraseña.' : 'Crea tu cuenta solo con un nombre de usuario y contraseña.'}
         </p>
         
         {error && (
           <div style={{
             color: '#ef4444',
-            marginBottom: '1rem',
+            marginBottom: '1.25rem',
             background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            padding: '0.85rem',
-            borderRadius: '8px',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            padding: '0.85rem 1rem',
+            borderRadius: '10px',
             fontSize: '0.88rem',
             textAlign: 'left',
-            lineHeight: 1.4
+            lineHeight: 1.4,
+            fontWeight: 500
           }}>
             {error}
           </div>
@@ -175,14 +167,15 @@ export default function Login() {
         {successMessage && (
           <div style={{
             color: '#10b981',
-            marginBottom: '1rem',
+            marginBottom: '1.25rem',
             background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            padding: '0.85rem',
-            borderRadius: '8px',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            padding: '0.85rem 1rem',
+            borderRadius: '10px',
             fontSize: '0.88rem',
             textAlign: 'left',
-            lineHeight: 1.4
+            lineHeight: 1.4,
+            fontWeight: 500
           }}>
             {successMessage}
           </div>
@@ -192,7 +185,7 @@ export default function Login() {
           {isLogin ? (
             <input 
               type="text" 
-              placeholder="Usuario o correo electrónico" 
+              placeholder="Nombre de usuario" 
               value={userOrEmail}
               onChange={(e) => setUserOrEmail(e.target.value)}
               className={styles.input}
@@ -202,7 +195,7 @@ export default function Login() {
           ) : (
             <input 
               type="text" 
-              placeholder="Tu nombre de usuario (ej. Carlos12)" 
+              placeholder="Elige tu usuario (ej. Carlos12)" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className={styles.input}
