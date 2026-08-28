@@ -37,9 +37,7 @@ export default function Login() {
 
         let emailToUse = input;
 
-        // Si no ingresó un email completo con '@'
         if (!input.includes('@')) {
-          // Intentar buscar el perfil por nombre de usuario
           const { data: profile } = await supabase
             .from('profiles')
             .select('email')
@@ -64,7 +62,7 @@ export default function Login() {
             throw new Error('Usuario o contraseña incorrectos. Verifica tus datos.');
           }
           if (signInError.message.includes('Email not confirmed')) {
-            throw new Error('⚠️ Tu proyecto de Supabase tiene activa la confirmación de email. Ve a Supabase -> Authentication -> Providers -> Email y desactiva "Confirm email".');
+            throw new Error('⚠️ Tu proyecto de Supabase requiere confirmar correos. En Supabase -> Authentication -> Providers -> Email desactiva "Confirm email".');
           }
           throw new Error(`Error de inicio de sesión: ${signInError.message}`);
         }
@@ -106,16 +104,16 @@ export default function Login() {
 
         if (signUpError) {
           console.error('Error signUp:', signUpError);
+          if (signUpError.message.includes('Email signups are disabled') || signUpError.message.includes('Signups not allowed')) {
+            throw new Error('⚠️ ¡Encontrado! El proveedor de Email está desactivado en Supabase. En tu panel de Supabase ve a Authentication -> Providers -> Email y ACTIVA "Enable Email provider" y "Allow new users to sign up", pero DESACTIVA "Confirm email".');
+          }
           if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
             throw new Error(`El usuario "${cleanUsername}" ya está registrado. Intenta iniciar sesión.`);
-          }
-          if (signUpError.message.includes('Signups not allowed')) {
-            throw new Error('⚠️ El registro de nuevos usuarios está desactivado en tu proyecto de Supabase (Authentication -> Settings -> Allow new users to sign up).');
           }
           throw new Error(`Error al registrar usuario: ${signUpError.message}`);
         }
 
-        // 4. Si el registro no inició sesión automáticamente (por ajuste de email confirmation en Supabase)
+        // 4. Si el registro no inició sesión automáticamente
         if (data?.user && !data?.session) {
           const { error: autoSignInError } = await supabase.auth.signInWithPassword({
             email: syntheticEmail,
@@ -123,7 +121,7 @@ export default function Login() {
           });
 
           if (autoSignInError) {
-            setSuccessMessage('¡Cuenta creada con éxito! Si no te redirige, desactiva "Confirm Email" en tu panel de Supabase (Authentication -> Providers -> Email).');
+            setSuccessMessage('¡Cuenta creada! En Supabase -> Authentication -> Providers -> Email desactiva "Confirm Email" para entrar directamente.');
             return;
           }
         }
