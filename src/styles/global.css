@@ -1,15 +1,17 @@
 :root {
-  /* Colors */
-  --bg-dark: #0f172a;
-  --bg-card: #1e293b;
-  --bg-card-hover: #334155;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --primary-nfl: #013369; /* NFL Blue */
+  /* NFL Night Stadium Palette */
+  --bg-dark: #070B14;
+  --bg-card: #101827;
+  --bg-card-hover: #1A263E;
+  --text-main: #F8FAFC;
+  --text-muted: #8B9BB4;
+  
+  --primary-nfl: #013369; /* NFL Navy */
   --accent-nfl: #D50A0A; /* NFL Red */
-  --accent-hover: #e11d48;
-  --success: #10b981;
-  --border-color: #334155;
+  --accent-gold: #FACC15; /* NFL Gold Accent */
+  
+  --success: #10B981; /* Turf Green */
+  --border-color: #1E293B;
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
