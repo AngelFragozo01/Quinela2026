@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { getWeekLabel } from '../services/dateUtils';
+import { CalendarDays } from 'lucide-react';
 import styles from './Upcoming.module.css';
 
 export default function Upcoming() {
@@ -56,7 +57,7 @@ export default function Upcoming() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>
-          📅 Calendario de Partidos por Semana
+          <CalendarDays size={28} color="var(--primary-nfl)" /> Calendario de Partidos por Semana
         </h2>
         <p className={styles.subtitle}>
           Consulta el calendario oficial de pretemporada y temporada regular organizado por semanas.

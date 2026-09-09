@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Trophy, Calendar, Clock, LogOut, Settings, CalendarDays } from 'lucide-react';
+import { Trophy, Calendar, Clock, LogOut, Settings, CalendarDays, Shield, ShieldCheck } from 'lucide-react';
 import styles from './Header.module.css';
 import Avatar from './Avatar';
 
@@ -17,7 +17,7 @@ export default function Header({ user, role, onLogout }: HeaderProps) {
       <div className={styles.container}>
         <div className={styles.logoContainer}>
           <Link to="/predictions" className={styles.logo} style={{ textDecoration: 'none', color: 'inherit' }}>
-            🏈 NFL Predictor
+            <Shield size={22} color="var(--accent-gold)" /> NFL Predictor
           </Link>
         </div>
         
@@ -44,7 +44,9 @@ export default function Header({ user, role, onLogout }: HeaderProps) {
         <div className={styles.userSection}>
           <div className={styles.userInfo}>
             <Avatar name={user} size={32} />
-            <span className={styles.userName}>{user} {role === 'admin' && '⭐'}</span>
+            <span className={styles.userName} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {user} {role === 'admin' && <ShieldCheck size={14} color="var(--accent-gold)" />}
+            </span>
           </div>
           <button onClick={onLogout} className={styles.logoutBtn} title="Cerrar Sesión">
             <LogOut size={18} />

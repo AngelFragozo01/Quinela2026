@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../supabase';
 import { TEAMS } from '../../services/mockData';
 import { getWeekLabel } from '../../services/dateUtils';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import styles from './CreateMatchTab.module.css';
 
 export default function CreateMatchTab() {
@@ -44,10 +45,10 @@ export default function CreateMatchTab() {
       });
 
       if (error) throw error;
-      setCreateMessage(`✅ Partido de ${getWeekLabel(matchWeek)} creado exitosamente para el día ${cleanDate}.`);
+      setCreateMessage(`Partido de ${getWeekLabel(matchWeek)} creado exitosamente para el día ${cleanDate}.`);
       setMatchDate('');
     } catch (err: any) {
-      setCreateMessage(`❌ Error al crear partido: ${err.message}`);
+      setCreateMessage(`Error al crear partido: ${err.message}`);
     } finally {
       setCreateLoading(false);
     }
@@ -63,7 +64,12 @@ export default function CreateMatchTab() {
         Añadir Nuevo Partido Manual (Pretemporada o Temporada Regular)
       </h3>
 
-      {createMessage && <div className={styles.message}>{createMessage}</div>}
+      {createMessage && (
+        <div className={styles.message} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: createMessage.includes('Error') ? '#ef4444' : '#10b981' }}>
+          {createMessage.includes('Error') ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+          {createMessage}
+        </div>
+      )}
 
       <form onSubmit={handleCreateMatch} className={styles.form}>
         <div className={styles.row}>
@@ -97,12 +103,12 @@ export default function CreateMatchTab() {
               onChange={e => setMatchWeek(Number(e.target.value))}
               className={styles.select}
             >
-              <optgroup label="🔥 Pretemporada">
+              <optgroup label="Pretemporada">
                 <option value={-3}>Pretemporada 3</option>
                 <option value={-2}>Pretemporada 2</option>
                 <option value={-1}>Pretemporada 1</option>
               </optgroup>
-              <optgroup label="🏈 Temporada Regular">
+              <optgroup label="Temporada Regular">
                 {Array.from({ length: 18 }, (_, i) => i + 1).map(w => (
                   <option key={w} value={w}>Semana {w}</option>
                 ))}

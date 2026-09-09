@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { TEAMS } from '../../services/mockData';
 import { formatMatchDate, getWeekLabel } from '../../services/dateUtils';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import styles from './ManageResultsTab.module.css';
 
 export default function ManageResultsTab() {
@@ -36,7 +37,7 @@ export default function ManageResultsTab() {
         setScores(initialScores);
       }
     } catch (err: any) {
-      setManageMessage(`❌ Error al cargar partidos: ${err.message}`);
+      setManageMessage(`Error al cargar partidos: ${err.message}`);
     } finally {
       setManageLoading(false);
     }
@@ -77,10 +78,10 @@ export default function ManageResultsTab() {
 
       if (error) throw error;
       
-      setManageMessage('✅ Partido finalizado. Puntuaciones actualizadas en la clasificación e historial.');
+      setManageMessage('Partido finalizado. Puntuaciones actualizadas en la clasificación e historial.');
       fetchActiveMatches();
     } catch (err: any) {
-      setManageMessage(`❌ Error al finalizar partido: ${err.message}`);
+      setManageMessage(`Error al finalizar partido: ${err.message}`);
     }
   };
 
@@ -88,7 +89,12 @@ export default function ManageResultsTab() {
     <div className={styles.container}>
       <h3 className={styles.heading}>Partidos Activos</h3>
 
-      {manageMessage && <div className={styles.message}>{manageMessage}</div>}
+      {manageMessage && (
+        <div className={styles.message} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: manageMessage.includes('Error') ? '#ef4444' : '#10b981' }}>
+          {manageMessage.includes('Error') ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+          {manageMessage}
+        </div>
+      )}
 
       {manageLoading ? (
         <div>Cargando partidos activos...</div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { getWeekLabel } from '../services/dateUtils';
+import { CalendarDays, Trophy, CheckCircle2, XCircle } from 'lucide-react';
 import styles from './History.module.css';
 
 export default function History() {
@@ -69,9 +70,13 @@ export default function History() {
   if (finishedMatches.length === 0) {
     return (
       <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)', animation: 'slideUp 0.4s ease' }}>
-        <h2>📅 Historial de Partidos</h2>
+        <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <CalendarDays size={28} color="var(--primary-nfl)" /> Historial de Partidos
+        </h2>
         <p style={{ marginTop: '1rem' }}>Aún no hay partidos finalizados. Cuando el Administrador cierre y guarde el marcador de los partidos, aparecerán organizados por semana aquí.</p>
-        <div style={{ marginTop: '2rem', fontSize: '3rem', opacity: 0.4 }}>🏆</div>
+        <div style={{ marginTop: '2rem', opacity: 0.4, display: 'flex', justifyContent: 'center' }}>
+          <Trophy size={48} />
+        </div>
       </div>
     );
   }
@@ -96,7 +101,7 @@ export default function History() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>
-          🏆 Historial de Resultados por Semana
+          <Trophy size={28} color="var(--primary-nfl)" /> Historial de Resultados por Semana
         </h2>
         <p className={styles.subtitle}>
           Consulta los marcadores finales oficiales y tus aciertos en cada jornada.
@@ -166,8 +171,8 @@ export default function History() {
                   return (
                     <div key={match.id} style={{ position: 'relative' }}>
                       {userPred && (
-                        <div className={`${styles.resultBadge} ${isHit ? styles.resultHit : styles.resultMiss}`}>
-                          {isHit ? '🎯 ¡Acierto! (+10 pts)' : '❌ Fallado'}
+                        <div className={`${styles.resultBadge} ${isHit ? styles.resultHit : styles.resultMiss}`} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {isHit ? <><CheckCircle2 size={14} /> ¡Acierto! (+10 pts)</> : <><XCircle size={14} /> Fallado</>}
                         </div>
                       )}
                       <MatchCard 

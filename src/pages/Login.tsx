@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
+import { Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import styles from './Login.module.css';
 
 // Convierte cualquier nombre de usuario (incluso con espacios o acentos) en un email válido para Supabase
@@ -62,7 +63,7 @@ export default function Login() {
             throw new Error('Usuario o contraseña incorrectos. Verifica tus datos.');
           }
           if (signInError.message.includes('Email not confirmed')) {
-            throw new Error('⚠️ Tu proyecto de Supabase requiere confirmar correos. En Supabase -> Authentication -> Providers -> Email desactiva "Confirm email".');
+            throw new Error('Tu proyecto de Supabase requiere confirmar correos. En Supabase -> Authentication -> Providers -> Email desactiva "Confirm email".');
           }
           throw new Error(`Error de inicio de sesión: ${signInError.message}`);
         }
@@ -105,7 +106,7 @@ export default function Login() {
         if (signUpError) {
           console.error('Error signUp:', signUpError);
           if (signUpError.message.includes('Email signups are disabled') || signUpError.message.includes('Signups not allowed')) {
-            throw new Error('⚠️ ¡Encontrado! El proveedor de Email está desactivado en Supabase. En tu panel de Supabase ve a Authentication -> Providers -> Email y ACTIVA "Enable Email provider" y "Allow new users to sign up", pero DESACTIVA "Confirm email".');
+            throw new Error('¡Encontrado! El proveedor de Email está desactivado en Supabase. En tu panel de Supabase ve a Authentication -> Providers -> Email y ACTIVA "Enable Email provider" y "Allow new users to sign up", pero DESACTIVA "Confirm email".');
           }
           if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
             throw new Error(`El usuario "${cleanUsername}" ya está registrado. Intenta iniciar sesión.`);
@@ -139,7 +140,9 @@ export default function Login() {
   return (
     <div className={styles.container}>
       <div className={styles.glassCard}>
-        <div className={styles.logo}>🏈 NFL Predictor</div>
+        <div className={styles.logo} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <Shield size={32} color="var(--accent-gold)" /> NFL Predictor
+        </div>
         <h1 className={styles.title}>{isLogin ? 'Iniciar Sesión' : 'Registrarse'}</h1>
         <p className={styles.subtitle}>
           {isLogin ? 'Ingresa con tu usuario y contraseña.' : 'Crea tu cuenta solo con un nombre de usuario y contraseña.'}
@@ -156,9 +159,13 @@ export default function Login() {
             fontSize: '0.88rem',
             textAlign: 'left',
             lineHeight: 1.4,
-            fontWeight: 500
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.5rem'
           }}>
-            {error}
+            <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span>{error}</span>
           </div>
         )}
         
@@ -173,9 +180,13 @@ export default function Login() {
             fontSize: '0.88rem',
             textAlign: 'left',
             lineHeight: 1.4,
-            fontWeight: 500
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.5rem'
           }}>
-            {successMessage}
+            <CheckCircle2 size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span>{successMessage}</span>
           </div>
         )}
 

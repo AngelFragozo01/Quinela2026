@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { getWeekLabel } from '../../services/dateUtils';
-import { Lock, Unlock, ShieldAlert } from 'lucide-react';
+import { Lock, Unlock, ShieldAlert, CheckCircle2, AlertTriangle, Zap, Calendar, Ban, ShieldCheck } from 'lucide-react';
 import styles from './WeekControlTab.module.css';
 
 export default function WeekControlTab() {
@@ -28,7 +28,7 @@ export default function WeekControlTab() {
         setAllMatches(data);
       }
     } catch (err: any) {
-      setWeeksMessage(`❌ Error al cargar semanas: ${err.message}`);
+      setWeeksMessage(`Error al cargar semanas: ${err.message}`);
     } finally {
       setWeeksLoading(false);
     }
@@ -45,10 +45,10 @@ export default function WeekControlTab() {
 
       if (error) throw error;
 
-      setWeeksMessage(`✅ ${getWeekLabel(weekNum)} ${lockStatus ? '🔒 CERRADA y bloqueada' : '🟢 ABIERTA para votación'}.`);
+      setWeeksMessage(`${getWeekLabel(weekNum)} ${lockStatus ? 'CERRADA y bloqueada' : 'ABIERTA para votación'}.`);
       await fetchAllMatchesForWeeks();
     } catch (err: any) {
-      setWeeksMessage(`❌ Error al actualizar ${getWeekLabel(weekNum)}: ${err.message}`);
+      setWeeksMessage(`Error al actualizar ${getWeekLabel(weekNum)}: ${err.message}`);
     } finally {
       setWeeksLoading(false);
     }
@@ -62,15 +62,15 @@ export default function WeekControlTab() {
         // Bloquear todas y abrir solo la semana seleccionada
         await supabase.from('matches').update({ is_locked: true }).neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('matches').update({ is_locked: false }).eq('week', openWeekNum);
-        setWeeksMessage(`✅ ${getWeekLabel(openWeekNum)} ABIERTA y las demás CERRADAS / BLOQUEADAS.`);
+        setWeeksMessage(`${getWeekLabel(openWeekNum)} ABIERTA y las demás CERRADAS / BLOQUEADAS.`);
       } else {
         await supabase.from('matches').update({ is_locked: lockStatus }).neq('id', '00000000-0000-0000-0000-000000000000');
-        setWeeksMessage(`✅ Todas las jornadas ${lockStatus ? '🔒 BLOQUEADAS' : '🟢 ABIERTAS'} exitosamente.`);
+        setWeeksMessage(`Todas las jornadas ${lockStatus ? 'BLOQUEADAS' : 'ABIERTAS'} exitosamente.`);
       }
 
       await fetchAllMatchesForWeeks();
     } catch (err: any) {
-      setWeeksMessage(`❌ Error al actualizar jornadas: ${err.message}`);
+      setWeeksMessage(`Error al actualizar jornadas: ${err.message}`);
     } finally {
       setWeeksLoading(false);
     }
@@ -81,8 +81,8 @@ export default function WeekControlTab() {
   return (
     <div className={styles.container}>
       <div>
-        <h3 className={styles.title}>
-          🔒 Control Manual de Votaciones por Semana
+        <h3 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Lock size={20} /> Control Manual de Votaciones por Semana
         </h3>
         <p className={styles.subtitle}>
           Abre o cierra la votación de cualquier jornada con un clic. Cuando una semana está <strong>Cerrada</strong>, los usuarios no podrán emitir ni modificar votos para esos partidos.
@@ -90,7 +90,8 @@ export default function WeekControlTab() {
       </div>
 
       {weeksMessage && (
-        <div className={styles.message}>
+        <div className={styles.message} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: weeksMessage.includes('Error') ? '#ef4444' : '#10b981' }}>
+          {weeksMessage.includes('Error') ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
           {weeksMessage}
         </div>
       )}
@@ -106,29 +107,33 @@ export default function WeekControlTab() {
             onClick={() => handleBatchLockWeeks(true, -3)}
             disabled={weeksLoading}
             className={styles.batchBtnBlue}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            🔥 Abrir Solo Pretemporada 3
+            <Zap size={16} /> Abrir Solo Pretemporada 3
           </button>
           <button
             onClick={() => handleBatchLockWeeks(true, 1)}
             disabled={weeksLoading}
             className={styles.batchBtnBlue}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            🟢 Abrir Solo Semana 1
+            <Calendar size={16} /> Abrir Solo Semana 1
           </button>
           <button
             onClick={() => handleBatchLockWeeks(true)}
             disabled={weeksLoading}
             className={styles.batchBtnRed}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            🔒 Bloquear Todo
+            <Ban size={16} /> Bloquear Todo
           </button>
           <button
             onClick={() => handleBatchLockWeeks(false)}
             disabled={weeksLoading}
             className={styles.batchBtnGreen}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            🔓 Abrir Todo
+            <ShieldCheck size={16} /> Abrir Todo
           </button>
         </div>
       </div>

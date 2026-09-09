@@ -1,3 +1,4 @@
+import { Lock, CheckCircle2, Clock, Zap } from 'lucide-react';
 import styles from './MatchCard.module.css';
 import { TEAMS, Match } from '../services/mockData';
 import { formatMatchDate } from '../services/dateUtils';
@@ -49,7 +50,7 @@ export default function MatchCard({
             alignItems: 'center',
             gap: '0.25rem'
           }}>
-            🔒 {lockReason || (hasVoted ? 'CERRADO' : 'SIN VOTAR')}
+            <Lock size={12} /> {lockReason || (hasVoted ? 'CERRADO' : 'SIN VOTAR')}
           </span>
         ) : isReadOnly ? (
           <span style={{ 
@@ -70,9 +71,12 @@ export default function MatchCard({
             padding: '0.2rem 0.5rem',
             borderRadius: '4px',
             fontSize: '0.75rem',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem'
           }}>
-            ✅ SELECCIONADO
+            <CheckCircle2 size={12} /> SELECCIONADO
           </span>
         ) : daysRemaining !== undefined && daysRemaining > 0 ? (
           <span style={{
@@ -82,9 +86,12 @@ export default function MatchCard({
             padding: '0.2rem 0.5rem',
             borderRadius: '4px',
             fontSize: '0.75rem',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem'
           }}>
-            🟢 {daysRemaining === 1 ? 'Queda 1 día' : `Quedan ${daysRemaining} días`}
+            <Clock size={12} /> {daysRemaining === 1 ? 'Queda 1 día' : `Quedan ${daysRemaining} días`}
           </span>
         ) : (
           <span style={{
@@ -94,9 +101,12 @@ export default function MatchCard({
             padding: '0.2rem 0.5rem',
             borderRadius: '4px',
             fontSize: '0.75rem',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem'
           }}>
-            ⚡ ABIERTO
+            <Zap size={12} /> ABIERTO
           </span>
         )}
       </div>

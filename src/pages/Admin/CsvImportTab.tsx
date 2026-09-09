@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../supabase';
 import { getTeamIdFromName } from '../../services/mockData';
+import { CheckCircle2, AlertTriangle, FileUp, Database } from 'lucide-react';
 import styles from './CsvImportTab.module.css';
 
 export default function CsvImportTab() {
@@ -25,7 +26,7 @@ export default function CsvImportTab() {
 
   const handleImportCsv = async () => {
     if (!csvText.trim()) {
-      setCsvMessage('⚠️ Por favor ingresa o sube el contenido del archivo CSV.');
+      setCsvMessage('Por favor ingresa o sube el contenido del archivo CSV.');
       return;
     }
 
@@ -99,7 +100,7 @@ export default function CsvImportTab() {
     }
 
     if (matchesToInsert.length === 0) {
-      setCsvMessage('❌ No se encontraron partidos válidos para insertar.');
+      setCsvMessage('Error: No se encontraron partidos válidos para insertar.');
       setCsvProgress({ total: 0, inserted: 0, errors });
       setCsvLoading(false);
       return;
@@ -117,23 +118,28 @@ export default function CsvImportTab() {
       }
 
       setCsvProgress({ total: matchesToInsert.length, inserted: insertedCount, errors });
-      setCsvMessage(`🎉 ¡Se importaron exitosamente ${insertedCount} partidos a Supabase!`);
+      setCsvMessage(`¡Se importaron exitosamente ${insertedCount} partidos a Supabase!`);
     } catch (err: any) {
-      setCsvMessage(`❌ Error al guardar en Supabase: ${err.message}`);
+      setCsvMessage(`Error al guardar en Supabase: ${err.message}`);
     } finally {
       setCsvLoading(false);
     }
   };
 
+  const isSuccess = csvMessage && !csvMessage.includes('Error') && !csvMessage.includes('Por favor');
+
   return (
     <div className={styles.card}>
-      <h3 className={styles.heading}>📁 Cargar Calendario Completo (CSV)</h3>
+      <h3 className={styles.heading} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <FileUp size={20} /> Cargar Calendario Completo (CSV)
+      </h3>
       <p className={styles.description}>
         Sube o pega el calendario de partidos en formato CSV. El sistema mapeará automáticamente los nombres de los equipos y cargará la temporada en Supabase.
       </p>
 
       {csvMessage && (
-        <div className={csvMessage.includes('🎉') ? styles.alertSuccess : styles.alertError}>
+        <div className={isSuccess ? styles.alertSuccess : styles.alertError} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {isSuccess ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
           {csvMessage}
         </div>
       )}
@@ -163,8 +169,9 @@ export default function CsvImportTab() {
         onClick={handleImportCsv}
         disabled={csvLoading || !csvText.trim()}
         className={styles.importBtn}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
       >
-        {csvLoading ? 'Procesando e Importando Partidos...' : '🚀 Importar Calendario a Supabase'}
+        {csvLoading ? 'Procesando e Importando Partidos...' : <><Database size={18} /> Importar Calendario a Supabase</>}
       </button>
 
       {csvProgress.errors.length > 0 && (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import Avatar from '../components/Avatar';
+import { Trophy } from 'lucide-react';
 
 interface UserScore {
   username: string;
@@ -63,7 +64,7 @@ export default function Leaderboard() {
   return (
     <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
       <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        Clasificación Global
+        <Trophy size={24} color="var(--primary-nfl)" /> Clasificación Global
       </h2>
 
       {leaderboard.length === 0 ? (
@@ -89,7 +90,7 @@ export default function Leaderboard() {
               {leaderboard.map((user, index) => (
                 <tr key={user.username} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '1rem', fontWeight: 'bold' }}>
-                    {index === 0 && user.points > 0 ? <span title="Primer Lugar" style={{ fontSize: '1.5rem' }}>🏆</span> : `#${index + 1}`}
+                    {index === 0 && user.points > 0 ? <span title="Primer Lugar" style={{ display: 'flex', alignItems: 'center' }}><Trophy size={24} color="var(--accent-gold)" /></span> : `#${index + 1}`}
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

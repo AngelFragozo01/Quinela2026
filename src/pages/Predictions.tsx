@@ -7,7 +7,7 @@ import {
   isWeekVotingClosed, 
   getWeekLabel 
 } from '../services/dateUtils';
-import { Lock, CheckCircle2, Clock } from 'lucide-react';
+import { Lock, CheckCircle2, Clock, Activity } from 'lucide-react';
 import styles from './Predictions.module.css';
 
 interface ConfirmModalData {
@@ -85,13 +85,12 @@ export default function Predictions() {
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
     if (predictions[match.id]) {
-      // Si el usuario ya votó por este partido, ignorar los clics.
       return;
     }
 
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta jornada se encuentra cerrada.");
+      alert("La votación para esta jornada se encuentra cerrada.");
       return;
     }
 
@@ -104,7 +103,7 @@ export default function Predictions() {
 
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
-      alert("⚠️ La votación para esta jornada ha sido cerrada.");
+      alert("La votación para esta jornada ha sido cerrada.");
       setConfirmModal(null);
       return;
     }
@@ -125,7 +124,7 @@ export default function Predictions() {
       setConfirmModal(null);
 
       const teamName = TEAMS[teamId]?.name || 'Equipo';
-      setSuccessToast(`✅ ¡Pronóstico guardado para ${teamName}!`);
+      setSuccessToast(`¡Pronóstico guardado para ${teamName}!`);
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err: any) {
       console.error("Error guardando predicción:", err);
@@ -158,7 +157,7 @@ export default function Predictions() {
       {/* Cabecera */}
       <div className={styles.header}>
         <h2 className={styles.title}>
-          🏈 Quiniela Semanal
+          <Activity size={28} color="var(--primary-nfl)" /> Quiniela Semanal
         </h2>
         <p className={styles.subtitle}>
           Haz tus pronósticos por semana. La apertura y cierre de las votaciones es administrada por el Administrador.
@@ -195,8 +194,8 @@ export default function Predictions() {
           <div>
             <div className={styles.statusTitle}>
               {isCurrentWeekClosed 
-                ? `🔒 Votación Cerrada • ${getWeekLabel(selectedWeek)}`
-                : `🟢 Votación Abierta • ${getWeekLabel(selectedWeek)}`}
+                ? `Votación Cerrada • ${getWeekLabel(selectedWeek)}`
+                : `Votación Abierta • ${getWeekLabel(selectedWeek)}`}
             </div>
             <div className={isCurrentWeekClosed ? styles.statusSubClosed : styles.statusSubOpen}>
               {isCurrentWeekClosed
