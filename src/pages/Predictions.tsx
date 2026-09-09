@@ -84,13 +84,17 @@ export default function Predictions() {
   };
 
   const handleSelectTeamClick = (match: any, teamId: string) => {
+    if (predictions[match.id]) {
+      // Si el usuario ya votó por este partido, ignorar los clics.
+      return;
+    }
+
     const weekMatches = matches.filter(m => m.week === match.week);
     if (isWeekVotingClosed(weekMatches)) {
       alert("⚠️ La votación para esta jornada se encuentra cerrada.");
       return;
     }
 
-    if (predictions[match.id] === teamId) return;
     setConfirmModal({ match, teamId });
   };
 

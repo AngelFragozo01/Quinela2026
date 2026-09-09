@@ -24,7 +24,8 @@ export default function MatchCard({
   
   const { formattedDate, formattedTime } = formatMatchDate(match.date);
   const isReadOnly = !onSelectTeam;
-  const canClick = !match.isFinished && !isLocked && !isReadOnly;
+  const hasVoted = selectedTeamId !== undefined;
+  const canClick = !match.isFinished && !isLocked && !isReadOnly && !hasVoted;
 
   return (
     <div className={`${styles.card} ${match.isFinished ? styles.finished : ''} ${isLocked || isReadOnly ? styles.locked : ''}`}>
@@ -48,7 +49,7 @@ export default function MatchCard({
             alignItems: 'center',
             gap: '0.25rem'
           }}>
-            🔒 {lockReason || (selectedTeamId ? 'CERRADO' : 'SIN VOTAR')}
+            🔒 {lockReason || (hasVoted ? 'CERRADO' : 'SIN VOTAR')}
           </span>
         ) : isReadOnly ? (
           <span style={{ 
@@ -60,6 +61,18 @@ export default function MatchCard({
             fontWeight: 600
           }}>
             POR JUGAR
+          </span>
+        ) : hasVoted ? (
+          <span style={{
+            background: 'rgba(245, 158, 11, 0.15)',
+            color: '#fbbf24',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            padding: '0.2rem 0.5rem',
+            borderRadius: '4px',
+            fontSize: '0.75rem',
+            fontWeight: 'bold'
+          }}>
+            ✅ SELECCIONADO
           </span>
         ) : daysRemaining !== undefined && daysRemaining > 0 ? (
           <span style={{
@@ -88,13 +101,13 @@ export default function MatchCard({
         )}
       </div>
 
-      <div className={styles.teams}>
+      <div className={`${styles.teams} ${hasVoted ? styles.hasSelection : ''}`}>
         {/* Away Team */}
         <div 
           className={`${styles.team} ${selectedTeamId === awayTeam?.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === awayTeam?.id ? styles.winner : ''}`}
           onClick={() => canClick && onSelectTeam && onSelectTeam(awayTeam.id)}
           style={{ '--team-color': awayTeam?.color } as React.CSSProperties}
-          title={isReadOnly ? awayTeam?.name : isLocked ? (selectedTeamId === awayTeam?.id ? 'Tu pronóstico' : 'Votación cerrada') : canClick ? `Votar por ${awayTeam?.name}` : ''}
+          title={isReadOnly ? awayTeam?.name : hasVoted ? (selectedTeamId === awayTeam?.id ? 'Tu pronóstico' : 'Votación bloqueada') : isLocked ? 'Votación cerrada' : `Votar por ${awayTeam?.name}`}
         >
           <img src={awayTeam?.logo} alt={awayTeam?.name} className={styles.logo} />
           <span className={styles.name}>{awayTeam?.name}</span>
@@ -108,7 +121,7 @@ export default function MatchCard({
           className={`${styles.team} ${selectedTeamId === homeTeam?.id ? styles.selected : ''} ${match.isFinished && match.winnerTeamId === homeTeam?.id ? styles.winner : ''}`}
           onClick={() => canClick && onSelectTeam && onSelectTeam(homeTeam.id)}
           style={{ '--team-color': homeTeam?.color } as React.CSSProperties}
-          title={isReadOnly ? homeTeam?.name : isLocked ? (selectedTeamId === homeTeam?.id ? 'Tu pronóstico' : 'Votación cerrada') : canClick ? `Votar por ${homeTeam?.name}` : ''}
+          title={isReadOnly ? homeTeam?.name : hasVoted ? (selectedTeamId === homeTeam?.id ? 'Tu pronóstico' : 'Votación bloqueada') : isLocked ? 'Votación cerrada' : `Votar por ${homeTeam?.name}`}
         >
           <img src={homeTeam?.logo} alt={homeTeam?.name} className={styles.logo} />
           <span className={styles.name}>{homeTeam?.name}</span>
