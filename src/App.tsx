@@ -100,7 +100,7 @@ function App() {
           <Routes>
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/upcoming" element={<Upcoming />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/leaderboard" element={<Leaderboard currentUser={profile} />} />
             <Route path="/history" element={<History />} />
             {profile.role === 'admin' && <Route path="/admin" element={<Admin />} />}
             <Route path="*" element={<Navigate to="/predictions" replace />} />
