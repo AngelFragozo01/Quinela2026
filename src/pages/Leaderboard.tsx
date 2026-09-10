@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabase';
 import Avatar from '../components/Avatar';
 import { Trophy } from 'lucide-react';
+import WeekCarousel from '../components/WeekCarousel';
+import { getWeekLabel } from '../services/dateUtils';
+import styles from './History.module.css'; // Podemos reusar los estilos de los botones de semana de History
 
 interface UserScore {
   username: string;
@@ -10,25 +13,34 @@ interface UserScore {
 }
 
 export default function Leaderboard() {
-  const [leaderboard, setLeaderboard] = useState<UserScore[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWeek, setSelectedWeek] = useState<number | 'all'>('all');
 
   useEffect(() => {
-    calculateLeaderboard();
+    fetchData();
   }, []);
 
-  const calculateLeaderboard = async () => {
-    // 1. Obtener todos los perfiles, partidos y predicciones
-    const { data: profiles } = await supabase.from('profiles').select('*');
-    const { data: matches } = await supabase.from('matches').select('*').eq('is_finished', true);
-    const { data: predictions } = await supabase.from('predictions').select('*');
+  const fetchData = async () => {
+    const { data: profilesData } = await supabase.from('profiles').select('*');
+    const { data: matchesData } = await supabase.from('matches').select('*').eq('is_finished', true);
+    const { data: predictionsData } = await supabase.from('predictions').select('*');
 
-    if (!profiles || !matches || !predictions) {
-      setLoading(false);
-      return;
-    }
+    if (profilesData) setProfiles(profilesData);
+    if (matchesData) setMatches(matchesData);
+    if (predictionsData) setPredictions(predictionsData);
+    
+    setLoading(false);
+  };
 
-    // 2. Calcular los aciertos para cada usuario
+  const availableWeeks = useMemo(() => {
+    const weeks = new Set(matches.map(m => m.week ?? 1));
+    return Array.from(weeks).sort((a, b) => a - b);
+  }, [matches]);
+
+  const leaderboard = useMemo(() => {
     const scoresMap: Record<string, UserScore> = {};
 
     profiles.forEach(profile => {
@@ -39,33 +51,62 @@ export default function Leaderboard() {
       };
     });
 
-    // Revisar cada predicción contra los partidos finalizados
+    const filteredMatches = selectedWeek === 'all' 
+      ? matches 
+      : matches.filter(m => m.week === selectedWeek);
+
+    const matchIds = new Set(filteredMatches.map(m => m.id));
+
     predictions.forEach(pred => {
-      const match = matches.find(m => m.id === pred.match_id);
-      // Si el partido terminó y el equipo predicho es el ganador real
+      if (!matchIds.has(pred.match_id)) return;
+      
+      const match = filteredMatches.find(m => m.id === pred.match_id);
       if (match && match.winner_team_id === pred.predicted_winner_id) {
         if (scoresMap[pred.user_id]) {
           scoresMap[pred.user_id].hits += 1;
-          scoresMap[pred.user_id].points += 10; // 10 puntos por cada acierto
+          scoresMap[pred.user_id].points += 10;
         }
       }
     });
 
-    // 3. Convertir a array y ordenar por puntos
-    const sorted = Object.values(scoresMap).sort((a, b) => b.points - a.points);
-    setLeaderboard(sorted);
-    setLoading(false);
-  };
+    return Object.values(scoresMap).sort((a, b) => b.points - a.points);
+  }, [profiles, matches, predictions, selectedWeek]);
 
   if (loading) {
-    return <div style={{ textAlign: 'center', marginTop: '2rem' }}>Cargando clasificación...</div>;
+    return <div style={{ textAlign: 'center', marginTop: '2rem', color: 'var(--text-muted)' }}>Cargando clasificación...</div>;
   }
 
   return (
     <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
-      <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Trophy size={24} color="var(--primary-nfl)" /> Clasificación Global
-      </h2>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+          <Trophy size={28} color="var(--primary-nfl)" /> 
+          {selectedWeek === 'all' ? 'Clasificación Global' : `Clasificación - ${getWeekLabel(selectedWeek)}`}
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+          Consulta los aciertos y puntos totales o fíltralos por semana.
+        </p>
+      </div>
+
+      {availableWeeks.length > 0 && (
+        <WeekCarousel>
+          <button
+            onClick={() => setSelectedWeek('all')}
+            className={`${styles.weekBtn} ${selectedWeek === 'all' ? styles.weekBtnActive : ''}`}
+          >
+            Todas
+          </button>
+          {availableWeeks.map(w => (
+            <button
+              key={w}
+              onClick={() => setSelectedWeek(w)}
+              className={`${styles.weekBtn} ${selectedWeek === w ? styles.weekBtnActive : ''}`}
+            >
+              {getWeekLabel(w)}
+            </button>
+          ))}
+        </WeekCarousel>
+      )}
 
       {leaderboard.length === 0 ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aún no hay usuarios o resultados.</div>
@@ -98,9 +139,11 @@ export default function Leaderboard() {
                       <span style={{ fontWeight: '600' }}>{user.username}</span>
                     </div>
                   </td>
-                  <td style={{ padding: '1rem', textAlign: 'center', fontSize: '1.1rem' }}>{user.hits}</td>
-                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', color: 'var(--primary-nfl)', fontSize: '1.1rem' }}>
-                    {user.points}
+                  <td style={{ padding: '1rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: '600', color: 'var(--text-main)' }}>
+                    {user.hits}
+                  </td>
+                  <td style={{ padding: '1rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: '800', color: 'var(--primary-nfl)' }}>
+                    {user.points} pts
                   </td>
                 </tr>
               ))}

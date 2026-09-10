@@ -9,7 +9,7 @@ export default function CreateMatchTab() {
   const [homeTeam, setHomeTeam] = useState('KC');
   const [awayTeam, setAwayTeam] = useState('SF');
   const [matchDate, setMatchDate] = useState('');
-  const [matchWeek, setMatchWeek] = useState(-3); // Pretemporada 3 por defecto
+  const [matchWeek, setMatchWeek] = useState(1); // Semana 1 por defecto
   const [createLoading, setCreateLoading] = useState(false);
   const [createMessage, setCreateMessage] = useState('');
 
