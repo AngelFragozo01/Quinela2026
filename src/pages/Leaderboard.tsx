@@ -14,6 +14,7 @@ export interface UserScore {
   username: string;
   hits: number;
   points: number;
+  rank: number; // 1, 2, 3... con empates compartidos
 }
 
 interface LeaderboardProps {
@@ -52,22 +53,20 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
     setLoading(false);
   };
 
-  // Semanas disponibles que tienen al menos un partido registrado
   const availableWeeks = useMemo(() => {
     const weeks = new Set(matches.map(m => m.week ?? 1));
     return Array.from(weeks).sort((a, b) => a - b);
   }, [matches]);
 
-  // Verificar si una semana está cerrada manualmente (todos los partidos bloqueados o is_locked)
   const isWeekClosed = (weekNum: number) => {
     const weekMatches = matches.filter(m => (m.week ?? 1) === weekNum);
     if (weekMatches.length === 0) return false;
     return weekMatches.every(m => m.is_locked === true) || weekMatches.every(m => m.is_finished === true);
   };
 
-  // Calcular ranking por semana o global
+  // Ranking con empates reales compartidos
   const leaderboard: UserScore[] = useMemo(() => {
-    const scoresMap: Record<string, UserScore> = {};
+    const scoresMap: Record<string, { userId: string; username: string; hits: number; points: number }> = {};
 
     profiles.forEach(profile => {
       scoresMap[profile.id] = {
@@ -78,7 +77,6 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
       };
     });
 
-    // Partidos que ya están finalizados (para contar aciertos reales)
     const finishedMatches = matches.filter(m => m.is_finished === true);
     const filteredMatches = selectedWeek === 'all'
       ? finishedMatches
@@ -98,20 +96,103 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
       }
     });
 
-    return Object.values(scoresMap).sort((a, b) => {
+    // Ordenar primero por puntos descendente, luego por aciertos
+    const sorted = Object.values(scoresMap).sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       return b.hits - a.hits;
     });
+
+    // Asignar rangos estándar de competencia (1, 1, 1, 4...)
+    let currentRank = 1;
+    return sorted.map((user, idx) => {
+      if (idx > 0) {
+        const prev = sorted[idx - 1];
+        if (user.points !== prev.points || user.hits !== prev.hits) {
+          currentRank = idx + 1;
+        }
+      }
+      return {
+        ...user,
+        rank: currentRank
+      };
+    });
   }, [profiles, matches, predictions, selectedWeek]);
 
-  // Efecto para determinar si se activa el modo ceremonia
+  // Participantes que califican para podio (rango <= 3)
+  const podiumUsers = useMemo(() => {
+    return leaderboard.filter(u => u.rank <= 3);
+  }, [leaderboard]);
+
+  // Participantes que van a la lista inferior (rango > 3)
+  const restOfUsers = useMemo(() => {
+    return leaderboard.filter(u => u.rank > 3);
+  }, [leaderboard]);
+
+  // Estilo visual del podio según el rango que ocupan
+  const getRankTheme = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return {
+          title: '1° Lugar',
+          badgeText: '1',
+          gradientBg: 'from-amber-600/70 via-amber-500/80 to-yellow-400',
+          staticColBg: 'from-amber-950/70 via-amber-800/50 to-yellow-500/70',
+          borderCol: 'border-yellow-400',
+          heightCeremony: 'h-60 sm:h-72',
+          heightStatic: 'h-40 sm:h-48',
+          textGold: 'text-yellow-300',
+          textColor: 'text-yellow-400',
+          accentBadge: 'bg-yellow-400 text-slate-950',
+          icon: <Trophy className="w-9 h-9 text-yellow-300 drop-shadow" />,
+          avatarBorder: 'p-1 bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.5)]',
+          avatarSize: 68,
+          delay: 3.5
+        };
+      case 2:
+        return {
+          title: '2° Lugar',
+          badgeText: '2',
+          gradientBg: 'from-slate-800 to-slate-700/90',
+          staticColBg: 'from-slate-900 via-slate-800 to-slate-700/80',
+          borderCol: 'border-slate-300',
+          heightCeremony: 'h-44 sm:h-56',
+          heightStatic: 'h-28 sm:h-36',
+          textGold: 'text-slate-200',
+          textColor: 'text-slate-300',
+          accentBadge: 'bg-slate-200 text-slate-900',
+          icon: <Medal className="w-8 h-8 text-slate-300" />,
+          avatarBorder: 'p-0.5 bg-slate-400 shadow-[0_0_12px_rgba(203,213,225,0.3)]',
+          avatarSize: 58,
+          delay: 2.0
+        };
+      default: // 3 y empates de 3
+        return {
+          title: '3° Lugar',
+          badgeText: '3',
+          gradientBg: 'from-amber-950 to-amber-800/80',
+          staticColBg: 'from-slate-950 via-amber-950/80 to-amber-900/70',
+          borderCol: 'border-amber-600',
+          heightCeremony: 'h-32 sm:h-44',
+          heightStatic: 'h-20 sm:h-28',
+          textGold: 'text-amber-200',
+          textColor: 'text-amber-300',
+          accentBadge: 'bg-amber-700 text-white',
+          icon: <Medal className="w-7 h-7 text-amber-500" />,
+          avatarBorder: 'p-0.5 bg-amber-600 shadow-[0_0_12px_rgba(217,119,6,0.3)]',
+          avatarSize: 50,
+          delay: 0.8
+        };
+    }
+  };
+
+  // Efecto para activar o no la ceremonia
   useEffect(() => {
     if (selectedWeek !== 'all') {
       const closed = isWeekClosed(selectedWeek);
       const storageKey = `hasSeenPodium_week_${selectedWeek}`;
       const seen = localStorage.getItem(storageKey);
 
-      if (closed && !seen && leaderboard.length >= 3) {
+      if (closed && !seen && podiumUsers.length > 0) {
         setIsCeremonyMode(true);
         setHasCompletedCeremony(false);
       } else {
@@ -122,23 +203,24 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
       setIsCeremonyMode(false);
       setHasCompletedCeremony(true);
     }
-  }, [selectedWeek, matches, leaderboard.length]);
+  }, [selectedWeek, matches, podiumUsers.length]);
 
-  // Trigger confeti al revelar el 1er lugar en la ceremonia
+  // Disparo de confeti cuando se revela el 1er lugar (o líderes)
   useEffect(() => {
     if (isCeremonyMode) {
+      const hasFirstRank = podiumUsers.some(u => u.rank === 1);
+      const delayMs = hasFirstRank ? 4000 : 2500;
       const timer = setTimeout(() => {
         fireKahootConfetti();
         setHasCompletedCeremony(true);
-      }, 4000); // T = 4.0s
+      }, delayMs);
 
       return () => clearTimeout(timer);
     }
-  }, [isCeremonyMode, selectedWeek]);
+  }, [isCeremonyMode, selectedWeek, podiumUsers]);
 
   const fireKahootConfetti = () => {
     try {
-      // Ráfaga masiva desde el centro y laterales estilo estadio
       confetti({
         particleCount: 80,
         spread: 70,
@@ -195,16 +277,11 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
     );
   }
 
-  const top1 = leaderboard[0];
-  const top2 = leaderboard[1];
-  const top3 = leaderboard[2];
-  const restOfUsers = leaderboard.slice(3);
-
-  const canShowCeremonyToggle = selectedWeek !== 'all' && isWeekClosed(selectedWeek) && leaderboard.length >= 3;
+  const canShowCeremonyToggle = selectedWeek !== 'all' && isWeekClosed(selectedWeek) && podiumUsers.length > 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-16 px-2 sm:px-4">
-      {/* Header y Selector de Semanas */}
+      {/* Encabezado */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-white flex items-center gap-2">
@@ -218,7 +295,6 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
           </p>
         </div>
 
-        {/* Botón de repetición de ceremonia si está cerrada */}
         {canShowCeremonyToggle && !isCeremonyMode && (
           <button
             onClick={handleReplayCeremony}
@@ -230,7 +306,7 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
         )}
       </div>
 
-      {/* Selector Carrusel de Semanas */}
+      {/* Carrusel de Semanas */}
       {availableWeeks.length > 0 && (
         <div className="mb-6">
           <WeekCarousel>
@@ -260,7 +336,7 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
       ) : (
         <>
           {/* ========================================================= */}
-          {/* MODO CEREMONIA: PANTALLA COMPLETA ESTILO KAHOOT           */}
+          {/* MODO CEREMONIA: ANIMACIÓN COMPLETA ESTILO KAHOOT          */}
           {/* ========================================================= */}
           <AnimatePresence>
             {isCeremonyMode && selectedWeek !== 'all' && (
@@ -270,7 +346,6 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 bg-[#070B14]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-8 overflow-y-auto"
               >
-                {/* Cabecera Ceremonia */}
                 <motion.div
                   initial={{ y: -30, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -286,136 +361,68 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
                   <p className="text-slate-400 text-sm mt-1">El podio de honor de la jornada</p>
                 </motion.div>
 
-                {/* PODIO KAHOOT ANIMADO */}
-                <div className="w-full max-w-2xl flex items-end justify-center gap-2 sm:gap-6 my-auto pt-16 pb-4">
-                  {/* --- 2° LUGAR (Plata) T = 2.0s --- */}
-                  <div className="flex-1 flex flex-col items-center">
-                    {top2 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 2.0, duration: 0.5 }}
-                        className="flex flex-col items-center mb-3"
+                {/* PODIO KAHOOT ADAPTABLE A EMPATES */}
+                <div className="w-full max-w-3xl flex items-end justify-center gap-2 sm:gap-6 my-auto pt-16 pb-4 flex-wrap sm:flex-nowrap">
+                  {podiumUsers.map((user) => {
+                    const theme = getRankTheme(user.rank);
+                    return (
+                      <div
+                        key={user.userId || user.username}
+                        className="flex-1 min-w-[110px] sm:min-w-0 flex flex-col items-center"
                       >
-                        <div className="relative">
-                          <Avatar name={top2.username} size={56} />
-                          <div className="absolute -bottom-2 -right-2 bg-slate-200 text-slate-900 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-md border-2 border-[#070B14]">
-                            2
+                        <motion.div
+                          initial={{ opacity: 0, y: 35, scale: 0.85 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ delay: theme.delay, duration: 0.55, type: 'spring' }}
+                          className="flex flex-col items-center mb-3"
+                        >
+                          <div className="relative">
+                            {user.rank === 1 && (
+                              <motion.div
+                                initial={{ scale: 0, rotate: -20 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{ delay: theme.delay + 0.5, type: 'spring', stiffness: 200 }}
+                                className="absolute -top-6 left-1/2 -translate-x-1/2"
+                              >
+                                <Crown className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
+                              </motion.div>
+                            )}
+
+                            <div className={`rounded-full ${theme.avatarBorder}`}>
+                              <Avatar name={user.username} size={theme.avatarSize} />
+                            </div>
+                            <div
+                              className={`absolute -bottom-2 -right-1.5 ${theme.accentBadge} w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-md border-2 border-[#070B14]`}
+                            >
+                              {theme.badgeText}
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-sm font-bold text-slate-200 mt-3 text-center max-w-[100px] truncate">
-                          {top2.username}
-                        </span>
-                        <div className="text-slate-300 font-extrabold text-sm sm:text-base tabular-nums">
-                          <CountUp start={0} end={top2.points} duration={1.5} delay={2.0} /> pts
-                        </div>
-                        <span className="text-[11px] text-slate-400">{top2.hits} aciertos</span>
-                      </motion.div>
-                    )}
 
-                    {/* Columna Podio 2 */}
-                    <motion.div
-                      initial={{ scaleY: 0 }}
-                      animate={{ scaleY: 1 }}
-                      transition={{ delay: 2.0, type: 'spring', stiffness: 120, damping: 14 }}
-                      style={{ originY: 1 }}
-                      className="w-full h-44 sm:h-56 rounded-t-2xl bg-gradient-to-t from-slate-800 to-slate-700/80 border-t-2 border-slate-300 shadow-[0_-4px_20px_rgba(203,213,225,0.15)] flex flex-col items-center justify-between p-3"
-                    >
-                      <Medal className="w-8 h-8 text-slate-300" />
-                      <span className="text-3xl sm:text-4xl font-black text-slate-400">2°</span>
-                    </motion.div>
-                  </div>
-
-                  {/* --- 1° LUGAR (Oro) T = 3.5s --- */}
-                  <div className="flex-1 flex flex-col items-center z-10">
-                    {top1 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 40, scale: 0.8 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ delay: 3.5, duration: 0.6, type: 'spring' }}
-                        className="flex flex-col items-center mb-3"
-                      >
-                        <div className="relative">
-                          {/* Corona sobre el avatar al llegar */}
-                          <motion.div
-                            initial={{ scale: 0, rotate: -20 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ delay: 4.0, type: 'spring', stiffness: 200 }}
-                            className="absolute -top-6 left-1/2 -translate-x-1/2"
-                          >
-                            <Crown className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
-                          </motion.div>
-
-                          <div className="p-1 rounded-full bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.5)]">
-                            <Avatar name={top1.username} size={72} />
+                          <span className={`text-sm font-black mt-3 text-center max-w-[110px] truncate ${theme.textGold}`}>
+                            {user.username}
+                          </span>
+                          <div className={`font-black text-sm sm:text-base tabular-nums ${theme.textColor}`}>
+                            <CountUp start={0} end={user.points} duration={1.5} delay={theme.delay} /> pts
                           </div>
-                          <div className="absolute -bottom-2 -right-1 bg-yellow-400 text-slate-950 w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shadow-md border-2 border-[#070B14]">
-                            1
-                          </div>
-                        </div>
-                        <span className="text-base font-black text-yellow-300 mt-3 text-center max-w-[120px] truncate">
-                          {top1.username}
-                        </span>
-                        <div className="text-yellow-400 font-black text-lg sm:text-xl tabular-nums">
-                          <CountUp start={0} end={top1.points} duration={1.5} delay={3.5} /> pts
-                        </div>
-                        <span className="text-xs text-yellow-500/90 font-medium">{top1.hits} aciertos</span>
-                      </motion.div>
-                    )}
+                          <span className="text-[11px] text-slate-400">{user.hits} aciertos</span>
+                        </motion.div>
 
-                    {/* Columna Podio 1 */}
-                    <motion.div
-                      initial={{ scaleY: 0 }}
-                      animate={{ scaleY: 1 }}
-                      transition={{ delay: 3.5, type: 'spring', stiffness: 100, damping: 12 }}
-                      style={{ originY: 1 }}
-                      className="w-full h-60 sm:h-72 rounded-t-2xl bg-gradient-to-t from-amber-600/60 to-yellow-500/80 border-t-4 border-yellow-400 shadow-[0_-8px_30px_rgba(250,204,21,0.3)] flex flex-col items-center justify-between p-3"
-                    >
-                      <Trophy className="w-10 h-10 text-yellow-300 drop-shadow" />
-                      <span className="text-4xl sm:text-5xl font-black text-yellow-300">1°</span>
-                    </motion.div>
-                  </div>
-
-                  {/* --- 3° LUGAR (Bronce) T = 0.8s --- */}
-                  <div className="flex-1 flex flex-col items-center">
-                    {top3 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.8, duration: 0.5 }}
-                        className="flex flex-col items-center mb-3"
-                      >
-                        <div className="relative">
-                          <Avatar name={top3.username} size={50} />
-                          <div className="absolute -bottom-2 -right-2 bg-amber-700 text-white w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-md border-2 border-[#070B14]">
-                            3
-                          </div>
-                        </div>
-                        <span className="text-sm font-bold text-amber-200 mt-3 text-center max-w-[100px] truncate">
-                          {top3.username}
-                        </span>
-                        <div className="text-amber-300 font-extrabold text-sm sm:text-base tabular-nums">
-                          <CountUp start={0} end={top3.points} duration={1.5} delay={0.8} /> pts
-                        </div>
-                        <span className="text-[11px] text-amber-500/80">{top3.hits} aciertos</span>
-                      </motion.div>
-                    )}
-
-                    {/* Columna Podio 3 */}
-                    <motion.div
-                      initial={{ scaleY: 0 }}
-                      animate={{ scaleY: 1 }}
-                      transition={{ delay: 0.8, type: 'spring', stiffness: 140, damping: 15 }}
-                      style={{ originY: 1 }}
-                      className="w-full h-32 sm:h-44 rounded-t-2xl bg-gradient-to-t from-amber-950 to-amber-800/80 border-t-2 border-amber-600 shadow-[0_-4px_20px_rgba(217,119,6,0.15)] flex flex-col items-center justify-between p-3"
-                    >
-                      <Medal className="w-7 h-7 text-amber-500" />
-                      <span className="text-2xl sm:text-3xl font-black text-amber-600">3°</span>
-                    </motion.div>
-                  </div>
+                        {/* Columna con altura y estilo acorde al puesto */}
+                        <motion.div
+                          initial={{ scaleY: 0 }}
+                          animate={{ scaleY: 1 }}
+                          transition={{ delay: theme.delay, type: 'spring', stiffness: 120, damping: 14 }}
+                          style={{ originY: 1 }}
+                          className={`w-full ${theme.heightCeremony} rounded-t-2xl bg-gradient-to-t ${theme.gradientBg} border-t-4 ${theme.borderCol} shadow-xl flex flex-col items-center justify-between p-3`}
+                        >
+                          {theme.icon}
+                          <span className="text-3xl sm:text-4xl font-black text-white/80">{user.rank}°</span>
+                        </motion.div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* Botón Salir / Ver Clasificación Completa */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: hasCompletedCeremony ? 1 : 0.4, y: 0 }}
@@ -435,85 +442,55 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
           </AnimatePresence>
 
           {/* ========================================================= */}
-          {/* MODO ESTÁTICO (DEFAULT / CONSULTA REGULAR)                */}
+          {/* MODO ESTÁTICO (PODIO TOP 3 / EMPATES COMPARTIDOS)          */}
           {/* ========================================================= */}
-          {leaderboard.length >= 3 && (
+          {podiumUsers.length > 0 && (
             <div className="mb-10 pt-4">
-              <div className="w-full max-w-xl mx-auto flex items-end justify-center gap-3 sm:gap-6 px-2">
-                {/* 2° Lugar Estático (Plata) */}
-                <div className="flex-1 flex flex-col items-center">
-                  <div className="relative mb-2">
-                    <Avatar name={top2.username} size={54} />
-                    <div className="absolute -bottom-1 -right-1 bg-slate-300 text-slate-900 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow border-2 border-slate-900">
-                      2
+              <div className="w-full max-w-2xl mx-auto flex items-end justify-center gap-3 sm:gap-6 px-2 flex-wrap sm:flex-nowrap">
+                {podiumUsers.map((user) => {
+                  const theme = getRankTheme(user.rank);
+                  return (
+                    <div
+                      key={user.userId || user.username}
+                      className="flex-1 min-w-[95px] sm:min-w-0 flex flex-col items-center"
+                    >
+                      <div className="relative mb-2">
+                        {user.rank === 1 && (
+                          <Crown className="w-6 h-6 text-yellow-400 absolute -top-5 left-1/2 -translate-x-1/2 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
+                        )}
+                        <div className={`rounded-full ${theme.avatarBorder}`}>
+                          <Avatar name={user.username} size={theme.avatarSize - 8} />
+                        </div>
+                        <div
+                          className={`absolute -bottom-1 -right-1 ${theme.accentBadge} w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow border-2 border-slate-900`}
+                        >
+                          {theme.badgeText}
+                        </div>
+                      </div>
+
+                      <span className={`text-xs sm:text-sm font-bold text-center truncate max-w-[95px] sm:max-w-[120px] ${theme.textGold}`}>
+                        {user.username}
+                      </span>
+                      <span className={`text-xs sm:text-sm font-black tabular-nums ${theme.textColor}`}>
+                        {user.points} pts
+                      </span>
+                      <span className="text-[11px] text-slate-400 mb-2">{user.hits} aciertos</span>
+
+                      <div
+                        className={`w-full ${theme.heightStatic} rounded-t-xl bg-gradient-to-t ${theme.staticColBg} border-t-4 ${theme.borderCol} flex flex-col items-center justify-between py-2 shadow-md`}
+                      >
+                        {theme.icon}
+                        <span className="text-2xl sm:text-3xl font-black text-white/80">{user.rank}°</span>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-200 text-center truncate max-w-[90px] sm:max-w-[110px]">
-                    {top2.username}
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-slate-300 tabular-nums">
-                    {top2.points} pts
-                  </span>
-                  <span className="text-[11px] text-slate-400 mb-2">{top2.hits} aciertos</span>
-
-                  <div className="w-full h-28 sm:h-36 rounded-t-xl bg-gradient-to-t from-slate-900 via-slate-800 to-slate-700/70 border-t-2 border-slate-400 flex flex-col items-center justify-between py-2 shadow-md">
-                    <Medal className="w-6 h-6 text-slate-300" />
-                    <span className="text-2xl sm:text-3xl font-black text-slate-400">2°</span>
-                  </div>
-                </div>
-
-                {/* 1° Lugar Estático (Oro) */}
-                <div className="flex-1 flex flex-col items-center -mt-6">
-                  <div className="relative mb-2">
-                    <Crown className="w-6 h-6 text-yellow-400 absolute -top-5 left-1/2 -translate-x-1/2 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
-                    <div className="p-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 shadow-[0_0_15px_rgba(250,204,21,0.4)]">
-                      <Avatar name={top1.username} size={66} />
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-slate-950 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow border-2 border-slate-900">
-                      1
-                    </div>
-                  </div>
-                  <span className="text-sm sm:text-base font-black text-yellow-300 text-center truncate max-w-[110px] sm:max-w-[130px]">
-                    {top1.username}
-                  </span>
-                  <span className="text-sm sm:text-base font-black text-yellow-400 tabular-nums">
-                    {top1.points} pts
-                  </span>
-                  <span className="text-xs text-yellow-500/80 mb-2 font-medium">{top1.hits} aciertos</span>
-
-                  <div className="w-full h-40 sm:h-48 rounded-t-xl bg-gradient-to-t from-amber-950/60 via-amber-800/40 to-yellow-500/60 border-t-4 border-yellow-400 flex flex-col items-center justify-between py-3 shadow-[0_-4px_20px_rgba(250,204,21,0.2)]">
-                    <Trophy className="w-8 h-8 text-yellow-400" />
-                    <span className="text-3xl sm:text-4xl font-black text-yellow-300">1°</span>
-                  </div>
-                </div>
-
-                {/* 3° Lugar Estático (Bronce) */}
-                <div className="flex-1 flex flex-col items-center">
-                  <div className="relative mb-2">
-                    <Avatar name={top3.username} size={48} />
-                    <div className="absolute -bottom-1 -right-1 bg-amber-700 text-white w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow border-2 border-slate-900">
-                      3
-                    </div>
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-amber-200 text-center truncate max-w-[90px] sm:max-w-[110px]">
-                    {top3.username}
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-amber-300 tabular-nums">
-                    {top3.points} pts
-                  </span>
-                  <span className="text-[11px] text-amber-500/80 mb-2">{top3.hits} aciertos</span>
-
-                  <div className="w-full h-20 sm:h-28 rounded-t-xl bg-gradient-to-t from-slate-950 via-amber-950/80 to-amber-900/60 border-t-2 border-amber-600 flex flex-col items-center justify-between py-2 shadow-md">
-                    <Medal className="w-5 h-5 text-amber-500" />
-                    <span className="text-xl sm:text-2xl font-black text-amber-600">3°</span>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* TABLA LISTA COMPLETA (PUESTOS 4 EN ADELANTE Y GENERAL)    */}
+          {/* TABLA LISTA (PUESTOS 4 EN ADELANTE Y GENERAL)             */}
           {/* ========================================================= */}
           <div ref={fullListRef} className="mt-8">
             <div className="flex items-center justify-between mb-3 px-1">
@@ -521,7 +498,7 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
                 <span>Tabla de Posiciones</span>
                 {restOfUsers.length > 0 && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">
-                    Posición #4 - #{leaderboard.length}
+                    Puesto #{restOfUsers[0]?.rank} en adelante
                   </span>
                 )}
               </h3>
@@ -529,12 +506,13 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
 
             {restOfUsers.length === 0 ? (
               <div className="text-center py-6 bg-slate-900/40 rounded-xl border border-slate-800 text-slate-400 text-sm">
-                Todos los participantes se encuentran actualmente en el podio.
+                {podiumUsers.length > 0
+                  ? 'Todos los participantes se encuentran actualmente compartiendo el podio.'
+                  : 'Aún no hay puntuaciones registradas.'}
               </div>
             ) : (
               <div className="bg-[#101827] rounded-xl border border-slate-800 overflow-hidden shadow-lg divide-y divide-slate-800/80">
-                {restOfUsers.map((user, idx) => {
-                  const position = idx + 4;
+                {restOfUsers.map((user) => {
                   const isCurrent =
                     currentUser &&
                     (user.userId === currentUser.id ||
@@ -552,7 +530,7 @@ export default function Leaderboard({ currentUser }: LeaderboardProps) {
                       {/* Posición & Avatar & Nombre */}
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="w-7 text-center font-bold text-sm text-slate-400 tabular-nums">
-                          #{position}
+                          #{user.rank}
                         </span>
                         <Avatar name={user.username} size={36} />
                         <div className="flex items-center gap-2 min-w-0">
