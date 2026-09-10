@@ -124,7 +124,7 @@ export default function MatchCard({
           {match.isFinished && <span className={styles.score}>{match.awayScore}</span>}
         </div>
 
-        <div className={styles.divider}>@</div>
+        <div className={styles.divider}>VS</div>
 
         {/* Home Team */}
         <div 

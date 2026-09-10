@@ -20,7 +20,12 @@
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.5rem;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tabBtn {

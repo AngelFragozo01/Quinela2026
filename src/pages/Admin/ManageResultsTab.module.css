@@ -95,8 +95,12 @@
 }
 
 .divider {
-  font-weight: bold;
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
   color: var(--text-muted);
+  opacity: 0.55;
+  user-select: none;
 }
 
 .finalizeBtn {

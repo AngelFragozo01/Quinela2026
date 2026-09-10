@@ -133,7 +133,7 @@ export default function ManageResultsTab() {
                   />
                 </div>
 
-                <div className={styles.divider}>@</div>
+                <div className={styles.divider}>VS</div>
 
                 {/* Local */}
                 <div className={styles.teamBoxReverse}>

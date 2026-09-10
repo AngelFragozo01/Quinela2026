@@ -8,6 +8,7 @@ import {
   getWeekLabel 
 } from '../services/dateUtils';
 import { Lock, CheckCircle2, Clock, Activity } from 'lucide-react';
+import WeekCarousel from '../components/WeekCarousel';
 import styles from './Predictions.module.css';
 
 interface ConfirmModalData {
@@ -166,7 +167,7 @@ export default function Predictions() {
 
       {/* Selector de Semanas */}
       {availableWeeks.length > 0 && (
-        <div className={styles.weekSelector}>
+        <WeekCarousel>
           {availableWeeks.map(w => {
             const wMatches = matches.filter(m => m.week === w);
             const isClosed = isWeekVotingClosed(wMatches);
@@ -182,7 +183,7 @@ export default function Predictions() {
               </button>
             );
           })}
-        </div>
+        </WeekCarousel>
       )}
 
       {/* Banner de Estado de la Semana */}

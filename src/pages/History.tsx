@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { getWeekLabel } from '../services/dateUtils';
 import { CalendarDays, Trophy, CheckCircle2, XCircle } from 'lucide-react';
+import WeekCarousel from '../components/WeekCarousel';
 import styles from './History.module.css';
 
 export default function History() {
@@ -109,7 +110,7 @@ export default function History() {
       </div>
 
       {/* Selector de Semanas con scroll horizontal */}
-      <div className={styles.weekSelector}>
+      <WeekCarousel>
         <button
           onClick={() => setSelectedWeek('all')}
           className={`${styles.weekBtn} ${selectedWeek === 'all' ? styles.weekBtnActive : ''}`}
@@ -128,7 +129,7 @@ export default function History() {
             </button>
           );
         })}
-      </div>
+      </WeekCarousel>
 
       {/* Resumen de aciertos de la selección */}
       <div className={styles.performanceCard}>

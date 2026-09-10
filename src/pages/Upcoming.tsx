@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import MatchCard from '../components/MatchCard';
 import { getWeekLabel } from '../services/dateUtils';
 import { CalendarDays } from 'lucide-react';
+import WeekCarousel from '../components/WeekCarousel';
 import styles from './Upcoming.module.css';
 
 export default function Upcoming() {
@@ -66,7 +67,7 @@ export default function Upcoming() {
 
       {/* Selector de Semanas exclusivo */}
       {availableWeeks.length > 0 && (
-        <div className={styles.weekSelector}>
+        <WeekCarousel>
           {availableWeeks.map(w => (
             <button
               key={w}
@@ -76,7 +77,7 @@ export default function Upcoming() {
               {getWeekLabel(w)}
             </button>
           ))}
-        </div>
+        </WeekCarousel>
       )}
 
       {matches.length === 0 ? (
