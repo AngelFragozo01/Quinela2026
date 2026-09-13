@@ -1,4 +1,4 @@
-.container {
+﻿.container {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -7,6 +7,40 @@
 .heading {
   color: var(--text-muted);
   font-size: 1.1rem;
+}
+
+.subTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.subTabBtn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subTabBtn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.activeSubTab {
+  background: var(--primary-nfl);
+  color: white;
+  border-color: transparent;
 }
 
 .message {
@@ -39,6 +73,8 @@
   align-items: center;
   font-size: 0.85rem;
   color: var(--text-muted);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .weekBadge {
@@ -46,6 +82,19 @@
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-weight: bold;
+}
+
+.winnerBadge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .dateText {
@@ -92,6 +141,8 @@
   color: white;
   border: 1px solid var(--border-color);
   text-align: center;
+  font-weight: bold;
+  font-size: 1rem;
 }
 
 .divider {
@@ -103,18 +154,64 @@
   user-select: none;
 }
 
+.cardFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .finalizeBtn {
-  padding: 0.75rem;
+  padding: 0.75rem 1.25rem;
   background: var(--accent-nfl);
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
-  align-self: flex-end;
-  transition: background 0.2s ease;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .finalizeBtn:hover {
-  background: var(--accent-hover);
+  opacity: 0.9;
+}
+
+.saveChangesBtn {
+  padding: 0.75rem 1.25rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.saveChangesBtn:hover {
+  opacity: 0.9;
+}
+
+.reopenBtn {
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reopenBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
 }
