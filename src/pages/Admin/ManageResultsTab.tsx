@@ -1,8 +1,8 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { TEAMS } from '../../services/mockData';
 import { formatMatchDate, getWeekLabel } from '../../services/dateUtils';
-import { CheckCircle2, AlertTriangle, ListTodo, History, RotateCcw, Save } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ListTodo, History, Save } from 'lucide-react';
 import styles from './ManageResultsTab.module.css';
 
 export default function ManageResultsTab() {
@@ -97,30 +97,6 @@ export default function ManageResultsTab() {
       await fetchAllMatches();
     } catch (err: any) {
       setManageMessage(`Error al guardar resultado: ${err.message}`);
-    }
-  };
-
-  // Reabrir un partido para volverlo a pendientes si fue cerrado por accidente
-  const handleReopenMatch = async (matchId: string) => {
-    if (!confirm('¿Deseas reabrir este partido? Volverá a estar pendiente y no contará puntos en la clasificación hasta que sea finalizado nuevamente.')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('matches')
-        .update({
-          is_finished: false,
-          winner_team_id: null
-        })
-        .eq('id', matchId);
-
-      if (error) throw error;
-
-      setManageMessage('El partido fue reabierto. Ahora se encuentra en la lista de partidos pendientes.');
-      await fetchAllMatches();
-    } catch (err: any) {
-      setManageMessage(`Error al reabrir partido: ${err.message}`);
     }
   };
 
@@ -286,13 +262,6 @@ export default function ManageResultsTab() {
                 </div>
 
                 <div className={styles.cardFooter}>
-                  <button
-                    onClick={() => handleReopenMatch(matchId)}
-                    className={styles.reopenBtn}
-                    title="Devuelve este partido a la lista de pendientes"
-                  >
-                    <RotateCcw size={16} /> Reabrir Partido
-                  </button>
                   <button
                     onClick={() => handleSaveMatchResult(matchId, match.home_team_id, match.away_team_id, true)}
                     className={styles.saveChangesBtn}

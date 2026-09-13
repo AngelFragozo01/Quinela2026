@@ -1,13 +1,13 @@
-.header {
-  background-color: rgba(16, 24, 39, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+﻿.header {
+  background-color: rgba(16, 24, 39, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0 1.5rem;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
 }
 
 .container {
@@ -27,11 +27,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .navLink {
@@ -40,11 +41,12 @@
   gap: 0.5rem;
   color: var(--text-muted);
   text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .navLink:hover {
@@ -55,6 +57,7 @@
 .navLink.active {
   color: var(--text-main);
   background-color: var(--primary-nfl);
+  box-shadow: 0 2px 8px rgba(1, 51, 105, 0.4);
 }
 
 .adminLink {
@@ -78,7 +81,7 @@
 .userSection {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .userInfo {
@@ -107,26 +110,84 @@
   color: var(--accent-nfl);
 }
 
+/* ========================================================= */
+/* RESPONSIVE MÓVIL                                         */
+/* ========================================================= */
 @media (max-width: 768px) {
+  .header {
+    padding: 0 1rem;
+  }
+
+  .container {
+    height: 60px;
+  }
+
+  .logo {
+    font-size: 1.05rem;
+  }
+
+  .userName {
+    display: none;
+  }
+
+  /* Barra de navegación inferior móvil estilo App nativa */
   .nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: var(--bg-card);
-    border-top: 1px solid var(--border-color);
-    padding: 0.75rem;
+    background-color: rgba(16, 24, 39, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.4rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
+    display: flex;
     justify-content: space-around;
-    gap: 0;
-  }
-  
-  .navLink {
-    flex-direction: column;
+    align-items: center;
     gap: 0.25rem;
-    font-size: 0.75rem;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
-  .userName {
+  .nav::-webkit-scrollbar {
     display: none;
+  }
+
+  .navLink {
+    flex: 1;
+    min-width: 0;
+    max-width: 80px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.35rem 0.2rem;
+    border-radius: 8px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .navLink svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .navLink.active {
+    color: #ffffff;
+    background-color: rgba(1, 51, 105, 0.85);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+  }
+
+  .adminLink {
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+
+  .adminLink.active {
+    background: #f59e0b !important;
+    color: #000000 !important;
   }
 }
